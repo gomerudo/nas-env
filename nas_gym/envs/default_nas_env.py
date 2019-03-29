@@ -71,7 +71,7 @@ class DefaultNASEnv(gym.Env):
         nn = nas_helper.build_network(self.current_state)
         # 3. It will evaluate the neural network on the current_task (dataset)
         #   and will return the accuracy to be used as the reward
-        reward = trainer.train()
+        reward = trainer.train(nn)
         # 4. We return the tuple (state, reward, done, info)
         self.step += 1
 
