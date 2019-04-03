@@ -3,7 +3,7 @@
 import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
-from nas_gym.utl import miscellaneous as misc
+from nas_gym.utl.miscellaneous import is_valid_config_file
 
 
 class DefaultNASEnv(gym.Env):
@@ -28,7 +28,7 @@ class DefaultNASEnv(gym.Env):
         # TODO: set a default current_state (initial state) and call all
         # defaults setters.
         self.current_state = self.reset()
-        self.step = 0
+        self.step_count = 0
         # TODO: An attribute storing the current dataset to work on
         self.current_task = None
 
@@ -51,7 +51,7 @@ class DefaultNASEnv(gym.Env):
         act_s = None
         obs_s = None
 
-        if not misc.is_valid_config_file(self._config_file):
+        if not is_valid_config_file(self._config_file):
             raise ValueError(
                 "Invalid configuration file. Please use a valid format."
             )
@@ -70,13 +70,13 @@ class DefaultNASEnv(gym.Env):
         #   current state.
         nn = nas_helper.build_network(self.current_state)
         # 3. It will evaluate the neural network on the current_task (dataset)
-        #   and will return the accuracy to be used as the reward
-        reward = trainer.train(nn)
+        #   and will return the accuracy to be used as the reward.
+        reward = nas_helper.train(nn)
         # 4. We return the tuple (state, reward, done, info)
-        self.step += 1
+        self.step_count += 1
 
         # Check whether or not we are done
-        done_check = self.step - 1 == self.max_steps
+        done_check = self.step_count - 1 == self.max_steps
 
         # Return the info
         return self.current_state, reward, done_check, self.info_dict
@@ -93,13 +93,24 @@ class DefaultNASEnv(gym.Env):
 
         return reset_state
 
-    def render(self, mode='human', close=False):
+    def render(self, mode='human'):
         """Render the environment, according to the specified mode."""
         # TODO: think about how to render the network, maybe a tensorflow plot
         #   or simply the vector as text.
+        print(self.current_state)
 
     # This is not from gym.Env interface. This is used by our Meta-RL algorithm
     def new_task(self):
         """Change the NN task by switching the dataset to be used."""
         if self.dataset == 'meta-dataset':  # TODO: Change as global variable
             self.current_task = self.dataset_handler.next_dataset()
+
+
+class NASHelper:
+
+    @staticmethod
+    def perform_action():
+        """"""
+
+    def train_network():
+        """"""

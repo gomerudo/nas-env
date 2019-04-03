@@ -1,4 +1,4 @@
-"""Test the creation of the network"""
+"""Test the creation of the network."""
 
 import unittest
 import tensorflow as tf
@@ -73,4 +73,3 @@ class TestParsing(unittest.TestCase):
                 tf.get_default_graph()
             )
             file_writer.close()
-
