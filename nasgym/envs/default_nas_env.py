@@ -4,14 +4,14 @@ import numpy as np
 import yaml
 import gym
 from gym import spaces
-from nas_gym.utl.miscellaneous import is_valid_config_file
-from nas_gym.net_ops.net_builder import LTYPE_ADD
-from nas_gym.net_ops.net_builder import LTYPE_AVGPOOLING
-from nas_gym.net_ops.net_builder import LTYPE_CONCAT
-from nas_gym.net_ops.net_builder import LTYPE_CONVULUTION
-from nas_gym.net_ops.net_builder import LTYPE_IDENTITY
-from nas_gym.net_ops.net_builder import LTYPE_MAXPOOLING
-from nas_gym.net_ops.net_builder import LTYPE_TERMINAL
+from nasgym.utl.miscellaneous import is_valid_config_file
+from nasgym.net_ops.net_builder import LTYPE_ADD
+from nasgym.net_ops.net_builder import LTYPE_AVGPOOLING
+from nasgym.net_ops.net_builder import LTYPE_CONCAT
+from nasgym.net_ops.net_builder import LTYPE_CONVULUTION
+from nasgym.net_ops.net_builder import LTYPE_IDENTITY
+from nasgym.net_ops.net_builder import LTYPE_MAXPOOLING
+from nasgym.net_ops.net_builder import LTYPE_TERMINAL
 
 
 class DefaultNASEnv(gym.Env):

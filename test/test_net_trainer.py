@@ -3,10 +3,10 @@
 import unittest
 import numpy as np
 import tensorflow as tf
-from nas_gym.net_ops.net_trainer import DefaultNASTrainer
-from nas_gym.utl.miscellaneous import infer_data_shape
-from nas_gym.utl.miscellaneous import infer_n_classes
-from nas_gym.utl.miscellaneous import normalize_dataset
+from nasgym.net_ops.net_trainer import DefaultNASTrainer
+from nasgym.utl.miscellaneous import infer_data_shape
+from nasgym.utl.miscellaneous import infer_n_classes
+from nasgym.utl.miscellaneous import normalize_dataset
 WORKSPACE_DIR = "./workspace"
 GRAPHS_DIR = "{workspace}/graph".format(workspace=WORKSPACE_DIR)
 

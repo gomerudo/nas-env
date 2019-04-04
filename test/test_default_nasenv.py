@@ -1,11 +1,11 @@
 """Test the creation of the network."""
 
 import os
-import numpy as np
 import unittest
+import numpy as np
 from gym import spaces
-from nas_gym.envs.default_nas_env import DefaultNASEnvParser
-from nas_gym.envs.default_nas_env import DefaultNASEnv
+from nasgym.envs.default_nas_env import DefaultNASEnvParser
+from nasgym.envs.default_nas_env import DefaultNASEnv
 
 WORKSPACE_DIR = "./workspace"
 GRAPHS_DIR = "{workspace}/graph".format(workspace=WORKSPACE_DIR)
@@ -72,7 +72,7 @@ class TestDefaultNASEnv(unittest.TestCase):
         self.assertTrue(isinstance(nasenv.observation_space, spaces.Box))
         self.assertTrue(isinstance(nasenv.action_space, spaces.Discrete))
         self.assertTrue(isinstance(nasenv.actions_info, dict))
-        print(nasenv.actions_info)
+
         # Assert the dimension of the action space: it should be 288 for
         # default configuration
         expected_dim = 341

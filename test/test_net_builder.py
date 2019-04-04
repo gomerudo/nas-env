@@ -2,7 +2,7 @@
 
 import unittest
 import tensorflow as tf
-from nas_gym.net_ops.net_builder import sequence_to_net
+from nasgym.net_ops.net_builder import sequence_to_net
 
 WORKSPACE_DIR = "./workspace"
 GRAPHS_DIR = "{workspace}/graph".format(workspace=WORKSPACE_DIR)

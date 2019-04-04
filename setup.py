@@ -1,9 +1,9 @@
-"""Setup the nas_gym pkg."""
+"""Setup the nasgym pkg."""
 
 from setuptools import setup
 
 setup(
-    name='nas_gym',
+    name='nasgym',
     version='0.0.1',
     install_requires=['gym']
 )

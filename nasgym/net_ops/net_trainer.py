@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 import tensorflow as tf
-from nas_gym.net_ops.net_builder import sequence_to_net
+from nasgym.net_ops.net_builder import sequence_to_net
 
 
 class NasEnvTrainerBase(ABC):

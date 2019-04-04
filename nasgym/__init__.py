@@ -3,5 +3,5 @@ from gym.envs.registration import register
 
 register(
     id='NAS-v0',
-    entry_point='nas_gym.envs:FooEnv',
+    entry_point='nasgym.envs:DefaultNASEnv',
 )
