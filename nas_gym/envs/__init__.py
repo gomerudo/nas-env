@@ -1,3 +1,3 @@
 """The environments."""
 
-from gym_foo.envs.foo_env import FooEnv
+from nas_gym.envs.default_nas_env import DefaultNASEnv

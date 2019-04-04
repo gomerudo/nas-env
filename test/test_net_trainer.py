@@ -53,9 +53,6 @@ class TestDefaultNASTrainer(unittest.TestCase):
                 train_input_fn="default"
             )
 
-            # eval_data = eval_data/np.float32(255)
-            # eval_labels = eval_labels.astype(np.int32)  # not required
-
     def test_evaluate(self):
         """Test the Default Training procedure."""
         tf.reset_default_graph()
