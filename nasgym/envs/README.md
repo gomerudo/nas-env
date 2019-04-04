@@ -4,12 +4,17 @@
 
 ## FIXME: minor
 
+- [ ] Store the strings of the actions (`actions_info`) using the codes (`1`, `2` ...) instead of `convolution`, `remove`, etc.
+- [ ] Currently, the logic is a bit dependent of the NSC code. For a more robust solution, we need to provide classes/interfaces so that users can implement their own environments/encodings/etc.
+- [ ] In general, make the code here cleaner.
+
 ## TODO
 
-- [ ] Think about the extra information we need to return in the step() function.
-- [ ] Create a dataset handler that will take care of switching tasks (e.g. for meta-dataset).
-- [ ] Establish some very basic defaults. This will be used for the reset operation as well.
-- [ ] Load parameters from file (Maybe leave for later, cause the NAS environment defines that). Maybe export the actions from the nas-env repo as a file, and read them in this class.
-- [ ] Implement all the logic for the step() function.
-- [ ] Think about how to render the network, maybe a tensorflow plot or simply the vector as text. Maybe a plot with accuracy as well (but that would be more as to keep and historical).
-
+- [ ] Define the reward range properly: i.e., think if [0, inf) is correct.
+- [ ] Test if defining the reward range actually makes a difference.
+- [ ] Verify if `max_steps` is actually needed. Quick answer: yes, just make sure that the logic of `done` is correctly separating `max_steps` from `max_layers`. The latter is because with the `remove` actions we can have more than 10 steps before completing the `max_layers`.
+- [ ] Create the `DatasetHandler` that will take care of switching tasks (e.g. for meta-dataset) and provding the correct `train-validation` split.
+- [ ] Define the content of the `info_dict`. Ideas: The history of actions.
+- [ ] Implement the `train_network()` function that will call the `net_trainer` module.
+- [ ] For the `render()` function we are printing the state, but it could also be nice to make a plot of the network (this should come from the `net_ops` or/and `utl` modules).
+- [ ] If the `nasenv.yml` is not found, create the default configuration with the content we have now. Ideas: create a function to return the hardcoded string of the YAML file.
