@@ -7,8 +7,10 @@ from gym import spaces
 from nasgym.envs.default_nas_env import DefaultNASEnvParser
 from nasgym.envs.default_nas_env import DefaultNASEnv
 
-WORKSPACE_DIR = "./workspace"
-GRAPHS_DIR = "{workspace}/graph".format(workspace=WORKSPACE_DIR)
+NAS_YML_FILE = "{root_dir}/{name}".format(
+    root_dir=os.getcwd(),
+    name="resources/nasenv.yml"
+)
 
 
 class TestDefaultNASParser(unittest.TestCase):
@@ -16,12 +18,7 @@ class TestDefaultNASParser(unittest.TestCase):
 
     def test_observation_space(self):
         """Test the type of the observation space."""
-        current_dir = os.getcwd()
-        nas_yml_path = "{root_dir}/{name}".format(
-            root_dir=current_dir,
-            name="nasenv.yml"
-        )
-        dnase_parser = DefaultNASEnvParser(nas_yml_path)
+        dnase_parser = DefaultNASEnvParser(NAS_YML_FILE)
 
         # Assert the type
         self.assertTrue(isinstance(dnase_parser.observation_space, spaces.Box))
@@ -32,12 +29,7 @@ class TestDefaultNASParser(unittest.TestCase):
 
     def test_action_space(self):
         """Test the type of the action space."""
-        current_dir = os.getcwd()
-        nas_yml_path = "{root_dir}/{name}".format(
-            root_dir=current_dir,
-            name="nasenv.yml"
-        )
-        dnase_parser = DefaultNASEnvParser(nas_yml_path)
+        dnase_parser = DefaultNASEnvParser(NAS_YML_FILE)
 
         # Assert the type
         self.assertTrue(isinstance(dnase_parser.action_space, spaces.Discrete))
@@ -57,7 +49,7 @@ class TestDefaultNASEnv(unittest.TestCase):
         assigned_max_layers = 10
 
         nasenv = DefaultNASEnv(
-            config_file="./nasenv.yml",
+            config_file=NAS_YML_FILE,
             max_steps=assigned_max_steps,
             max_layers=assigned_max_layers,
             dataset='meta-dataset',
@@ -82,7 +74,7 @@ class TestDefaultNASEnv(unittest.TestCase):
         """Test the creation of the environment."""
         # Creation of the environment
         nasenv = DefaultNASEnv(
-            config_file="./nasenv.yml",
+            config_file=NAS_YML_FILE,
             max_steps=10,
             max_layers=10,
             dataset='meta-dataset',

@@ -20,7 +20,7 @@ class DefaultNASEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     reward_range = (0.0, float('inf'))
 
-    def __init__(self, config_file="./nasenv.yml", max_steps=100,
+    def __init__(self, config_file="resources/nasenv.yml", max_steps=100,
                  max_layers=10, dataset='meta-dataset', is_learning=True):
         """Initialize the NAS environment, via a configuration file."""
         self.is_learning = is_learning

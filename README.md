@@ -19,6 +19,6 @@ For a quick access, click the following links:
 
 ### General TODOs
 
-- [ ] Create the `resources` directory to store the YAML file and others.
+- [X] Create the `resources` directory to store the YAML file and others.
 - [ ] Improve docstrings
 - [ ] Use logging
