@@ -17,7 +17,7 @@
 - [X] Finish the final concatenation.
 - [ ] Currently, the network is built given two main assumptions: a) the layers are ordered by `layer_index`, and b) the predecesors of the layer are always lower than the layer's index. The first assumption should not cause any special issues when not satisfied cause we can order the layers, however if the second assumption is not satisfied then there will be errors cause the predecesor is not yet included. We need to think of a solution. Ideas: 1) Make the network non-valid and return `reward=0`, 2) Previosuly to the building process, try to optimize the architecture representation algorithmically (this can be **too much work**). I think the second option is encouraged cause otherwise the agent will ignore some architectures (note that not all the time we can optimize the arechitecture representation, but maybe sometimes will be). **ANALYZE EVERYTHING STATED HERE**.
 - [ ] In general, think about how to handle the non-valid architectures. My first idea is to return `reward=0`.
-- [ ] Check if we can move the layer codes to a global scope in `__init__.py`
+- [X] Check if we can move the layer codes to a global scope in `__init__.py`
 
 ### `net_trainer.py`
 
