@@ -1,22 +1,19 @@
 """Classes and methods for Net building."""
 
 import logging
+import numpy as np
 import tensorflow as tf
-
-
-LTYPE_CONVULUTION = 1
-LTYPE_MAXPOOLING = 2
-LTYPE_AVGPOOLING = 3
-LTYPE_IDENTITY = 4
-LTYPE_ADD = 5
-LTYPE_CONCAT = 6
-LTYPE_TERMINAL = 7
+from nasgym.net_ops import LTYPE_ADD
+from nasgym.net_ops import LTYPE_AVGPOOLING
+from nasgym.net_ops import LTYPE_CONCAT
+from nasgym.net_ops import LTYPE_CONVULUTION
+from nasgym.net_ops import LTYPE_IDENTITY
+from nasgym.net_ops import LTYPE_MAXPOOLING
+from nasgym.net_ops import LTYPE_TERMINAL
 
 
 def sequence_to_net(sequence, input_tensor):
     """Build a network with TensorFlow, given a sequence of NSC."""
-    # First thing is to handle the input: TODO.
-
     # We use this list to store the built layers. Remember that each time we
     # iterate, we find the predecesor of the current layer, hence, the inputs
     # are never a problem. If for some reason the layer has no input, we should
@@ -25,6 +22,9 @@ def sequence_to_net(sequence, input_tensor):
         0: input_tensor
     }
     current_layer = None
+
+    # First, sort the sequence to try to avoid problems
+    sequence = sort_sequence(sequence)
 
     # We use this list to see if all layers were used to construct the graph
     non_used_layers = list(range(len(sequence) + 1))
@@ -36,7 +36,7 @@ def sequence_to_net(sequence, input_tensor):
         layer_pred1 = layer_encoding[3]  # Predecesor 1
         layer_pred2 = layer_encoding[4]  # Predecesor 2
 
-        print("Adding layer %d" % layer_index)
+        # print("Adding layer %d" % layer_index)
 
         if layer_type == LTYPE_ADD:
             # i.e. if no predecesors at all
@@ -81,6 +81,7 @@ def sequence_to_net(sequence, input_tensor):
                 relu_layer = tf.keras.layers.ReLU(
                     name="ReLU"
                 )(batch_norm)
+                # )(tf_layers[layer_pred1])
 
                 conv_layer = tf.keras.layers.Conv2D(
                     filters=64,
@@ -107,8 +108,13 @@ def sequence_to_net(sequence, input_tensor):
                 )(tf_layers[layer_pred1])
 
         if layer_type == LTYPE_TERMINAL:
-            print(non_used_layers)
+            # print("Non used", non_used_layers)
 
+            # We remove the terminal layer because we already visited it.
+            try:
+                non_used_layers.remove(layer_index)
+            except ValueError:
+                pass
             # TODO: concat all the remaining elements. How?
             #   1. Remove the terminal node from the non_used_layers list
             #   2. If the remaining number of elements is one: do nothing
@@ -133,6 +139,21 @@ def sequence_to_net(sequence, input_tensor):
             non_used_layers.remove(layer_pred2)
         except ValueError:
             pass
+
+    # Handle the non used layers: concatenate one by one.
+    #   The last layer before terminate is never used, but if there are two or
+    #   more, then we need to concatenate one by one.
+    if non_used_layers:
+        print("Non used", non_used_layers)
+        pivot = tf_layers[non_used_layers[0]]
+        for idx in range(1, len(non_used_layers)):
+            with tf.name_scope("END_CONCAT{i}".format(i=idx)):
+                pivot = safe_concat(
+                    tensor_a=pivot,
+                    tensor_b=tf_layers[non_used_layers[idx]],
+                    name="SafeConcat"
+                )
+        current_layer = pivot
 
     # current_layer is the last used layer
     return current_layer
@@ -203,7 +224,7 @@ def fix_tensor_shape(tensor_target, tensor_reference, free_axis=1, name="pad"):
         # If everything is ok, we simply store the desired fix-value
         paddings_arg.append([axes_diff//2, axes_diff - axes_diff//2])
 
-    print("Padding with list", paddings_arg)
+    # print("Padding with list", paddings_arg)
 
     padded_tensor = tf.pad(
         tensor=tensor_target,
@@ -214,3 +235,11 @@ def fix_tensor_shape(tensor_target, tensor_reference, free_axis=1, name="pad"):
     )
 
     return padded_tensor
+
+
+def sort_sequence(sequence):
+    """Sort the elements in the sequence, by layer_index."""
+    narray = np.array(sequence)
+    narray = narray[narray[:, 0].argsort(kind='mergesort')]
+
+    return narray.tolist()
