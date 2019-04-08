@@ -79,6 +79,9 @@ class TestParsing(unittest.TestCase):
             )
             file_writer.close()
 
+            graph = tf.get_default_graph()
+            print(graph.as_graph_def())
+
     def test_sequence_to_net_wplaceholder_b(self):
         """Test intended to check that the graph is built correctly."""
         tf.reset_default_graph()

@@ -23,6 +23,6 @@
 
 - [ ] For `net_trainer.py`. See how to implement the learning rate decay used in BlockQNN.\
 - [ ] Implement the distributed strategy (if I remember correctly, the mirrored one). This will imply some changes to the shape of the input, as mentioned in the documentation. Follow [this tutorial](https://www.tensorflow.org/guide/distribute_strategy).
-- [ ] Implement the Eearly Stop Strategy implemented by BlockQNN, which uses the FLOPS and other net's property.
+- [X] Implement the Eearly Stop Strategy implemented by BlockQNN, which uses the FLOPS and other net's property.
 - [ ] Make the training procedure to log the useful information, such as accuracy, loss and any other thing that can be consider useful.
 - [ ] Try to improve the feeding of the data via the `input_fn`.
