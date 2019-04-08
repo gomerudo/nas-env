@@ -4,11 +4,12 @@
 
 - [ ] For `net_builder.py`. Check why BatchNormalization is giving more outputs in graph, which were not indicated in the code.
 - [ ] For `net_builder.py`. Check if `Add` node needs padding too: design tests with maxpooling and no-padding.
-- [ ] For `net_trainer.py`. When evaluation is called after training, the log of training is not shown in TensorBoard (see `nas-env/test/test_net_trainer.py`).
+- [X] For `net_trainer.py`. When evaluation is called after training, the log of training is not shown in TensorBoard (see `nas-env/test/test_net_trainer.py`).
 
 ## FIXME: Minor
 
 - [X] Order sequence by layer_index. Check feasibility.
+- [ ] For `net_trainer.py`. See how to implement the learning rate decay used in BlockQNN.\
 
 ## TODO
 
@@ -21,8 +22,7 @@
 
 ### `net_trainer.py`
 
-- [ ] For `net_trainer.py`. See how to implement the learning rate decay used in BlockQNN.\
 - [ ] Implement the distributed strategy (if I remember correctly, the mirrored one). This will imply some changes to the shape of the input, as mentioned in the documentation. Follow [this tutorial](https://www.tensorflow.org/guide/distribute_strategy).
 - [X] Implement the Eearly Stop Strategy implemented by BlockQNN, which uses the FLOPS and other net's property.
-- [ ] Make the training procedure to log the useful information, such as accuracy, loss and any other thing that can be consider useful.
+- [X] Make the training procedure to log the useful information, such as accuracy, loss and any other thing that can be consider useful.
 - [ ] Try to improve the feeding of the data via the `input_fn`.
