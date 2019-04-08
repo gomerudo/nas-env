@@ -45,7 +45,7 @@ class TestDefaultNASTrainer(unittest.TestCase):
         train_labels = train_labels.astype(np.int32)
 
         nas_trainer = DefaultNASTrainer(
-            network=net_nsc,
+            encoded_network=net_nsc,
             input_shape=infer_data_shape(train_data),
             n_classes=infer_n_classes(train_labels),
             batch_size=256,
@@ -86,7 +86,7 @@ class TestDefaultNASTrainer(unittest.TestCase):
         train_labels = train_labels.astype(np.int32)
 
         nas_trainer = DefaultNASTrainer(
-            network=net_nsc,
+            encoded_network=net_nsc,
             input_shape=infer_data_shape(train_data),
             n_classes=infer_n_classes(train_labels),
             batch_size=256,
@@ -209,6 +209,7 @@ class TestEarlyStopNASTrainer(unittest.TestCase):
     def test_train(self):
         """Test the Default Training procedure."""
         tf.reset_default_graph()
+        tf.logging.set_verbosity(tf.logging.INFO)
 
         net_nsc = [
             (1, 4, 0, 0, 0),  # Layer 1: Identity(input)
@@ -231,7 +232,7 @@ class TestEarlyStopNASTrainer(unittest.TestCase):
         train_labels = train_labels.astype(np.int32)
 
         nas_trainer = EarlyStopNASTrainer(
-            network=net_nsc,
+            encoded_network=net_nsc,
             input_shape=infer_data_shape(train_data),
             n_classes=infer_n_classes(train_labels),
             batch_size=256,
@@ -250,6 +251,7 @@ class TestEarlyStopNASTrainer(unittest.TestCase):
     def test_evaluate(self):
         """Test the Default Training procedure."""
         tf.reset_default_graph()
+        tf.logging.set_verbosity(tf.logging.INFO)
 
         net_nsc = [
             (1, 4, 0, 0, 0),  # Layer 1: Identity(input)
@@ -273,7 +275,7 @@ class TestEarlyStopNASTrainer(unittest.TestCase):
         train_labels = train_labels.astype(np.int32)
 
         nas_trainer = EarlyStopNASTrainer(
-            network=net_nsc,
+            encoded_network=net_nsc,
             input_shape=infer_data_shape(train_data),
             n_classes=infer_n_classes(train_labels),
             batch_size=256,

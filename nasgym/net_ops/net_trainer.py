@@ -7,7 +7,7 @@ from nasgym.net_ops.net_builder import sequence_to_net
 
 
 class NasEnvTrainerBase(ABC):
-    """Simple trainer class."""
+    """Simple trainer interface."""
 
     def __init__(self, encoded_network, input_shape, n_classes,
                  batch_size=256, log_path="./trainer",
@@ -30,12 +30,12 @@ class NasEnvTrainerBase(ABC):
         """Add the training graph."""
 
     @abstractmethod
-    def train(self, train_input_fn, n_epochs):
+    def train(self, train_data, train_labels, train_input_fn, n_epochs):
         """Abstract method to implement training."""
         raise NotImplementedError("Method must be implemented by subclass")
 
     @abstractmethod
-    def evaluate(self):
+    def evaluate(self, eval_data, eval_labels, eval_input_fn):
         """Abstract method to implement evaluation."""
         raise NotImplementedError("Method must be implemented by subclass")
 
@@ -43,11 +43,11 @@ class NasEnvTrainerBase(ABC):
 class DefaultNASTrainer(NasEnvTrainerBase):
     """Implement Training with Eearly Stop Strategy."""
 
-    def __init__(self, network, input_shape, n_classes, batch_size=256,
+    def __init__(self, encoded_network, input_shape, n_classes, batch_size=256,
                  log_path="./trainer", variable_scope="custom"):
         """Specific constructor with option for FLOPS and Density."""
         super(DefaultNASTrainer, self).__init__(
-            encoded_network=network,
+            encoded_network=encoded_network,
             input_shape=input_shape,
             n_classes=n_classes,
             batch_size=batch_size,
@@ -87,7 +87,8 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                     sequence=self.encoded_network,
                     input_tensor=net_input
                 )
-                
+
+                # 3. Build the Fully-Connected layers after block.
                 with tf.name_scope("L_FC"):
                     # Flatten and connect to the Dense Layer
                     ll_flat = tf.layers.flatten(
@@ -108,6 +109,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                         name="DROPOUT"
                     )
 
+                # 4. Build the Prediction Layer based on a Softmax
                 with tf.name_scope("L_PRED"):
                     # Logits layer
                     logits_layer = tf.layers.dense(
@@ -128,8 +130,8 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                         )
                     }
 
-                    # If we are asked for prediction only, we return the prediction
-                    # and stop adding nodes to the graph.
+                    # If we are asked for prediction only, we return the
+                    # prediction and stop adding nodes to the graph.
                     # pylint: disable=no-member
                     if mode == tf.estimator.ModeKeys.PREDICT:
                         return tf.estimator.EstimatorSpec(
@@ -137,6 +139,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                             predictions=predictions
                         )
 
+                # 4. Build the training nodes
                 with tf.name_scope("L_TRAIN"):
                     # Loss
                     loss_layer = tf.losses.sparse_softmax_cross_entropy(
@@ -155,8 +158,8 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                             epsilon=10e-08,
                             name="OPT"
                         )
-                        # We say that we want to optimize the loss layer using the
-                        # optimizer.
+                        # We say that we want to optimize the loss layer using
+                        # the optimizer.
                         train_op = optimizer.minimize(
                             loss=loss_layer,
                             global_step=tf.train.get_global_step(),
@@ -170,6 +173,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                             train_op=train_op
                         )
 
+                # 5. Build the evaluation nodes.
                 with tf.name_scope("L_EVAL"):
                     # Evaluation metric is accuracy
                     eval_metric_ops = {
@@ -186,12 +190,14 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                         loss=loss_layer,
                         eval_metric_ops=eval_metric_ops
                     )
+            # End of tf.variable_scope()
 
         # Return the model_fn function
         return model_fn
 
     def train(self, train_data, train_labels, train_input_fn="default",
               n_epochs=12):
+        """Train the self-network with the the given training configuration."""
         # Validations:
         # If it is of type str, make sure is a valid
         if isinstance(train_input_fn, str):
@@ -208,31 +214,32 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                     )
             else:
                 raise ValueError(
-                    "train_input_fn has been specified as string, but no valid \
+                    "train_input_fn has been specified as string, but no valid\
 value has been provided. Options are: 'default'"
                 )
 
         # Prepare for logging of the probabilities, i.e. the softmax layer
-        tensors_to_log = {
-            "probabilities": "{scope}/L_PRED/PL_Softmax".format(
-                scope=self.variable_scope
-            )
-        }
+        # tensors_to_log = {
+        #     "optimizer": "{scope}/L_TRAIN/OPT_MIN".format(
+        #         scope=self.variable_scope
+        #     ),
+        # }
 
-        logging_hook = tf.train.LoggingTensorHook(
-            tensors=tensors_to_log,
-            every_n_iter=1
-        )
+        # logging_hook = tf.train.LoggingTensorHook(
+        #     tensors=tensors_to_log,
+        #     every_n_iter=1
+        # )
 
         train_res = self.classifier.train(
             input_fn=train_input_fn,
             steps=n_epochs,
-            hooks=[logging_hook]
+            # hooks=[logging_hook]
         )
 
         return train_res
 
     def evaluate(self, eval_data, eval_labels, eval_input_fn="default"):
+        """Evaluate a given dataset, with the internal network."""
         # Validations:
         # If it is of type str, make sure is a valid
         if isinstance(eval_input_fn, str):
@@ -254,11 +261,11 @@ value has been provided. Options are: 'default'"
 class EarlyStopNASTrainer(DefaultNASTrainer):
     """Implement Training with Eearly Stop Strategy."""
 
-    def __init__(self, network, input_shape, n_classes, batch_size=256,
+    def __init__(self, encoded_network, input_shape, n_classes, batch_size=256,
                  log_path="./trainer", mu=0.5, rho=0.5, variable_scope="cnn"):
         """Specific constructor with option for FLOPS and Density."""
         super(EarlyStopNASTrainer, self).__init__(
-            network=network,
+            encoded_network=encoded_network,
             input_shape=input_shape,
             n_classes=n_classes,
             batch_size=batch_size,
@@ -266,6 +273,7 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
             variable_scope=variable_scope
         )
         # Custom variables for the refined accuracy in BlockQNN implementation
+        # pylint: disable=invalid-name
         self.mu = mu
         self.rho = rho
 
@@ -296,9 +304,10 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                     sequence=self.encoded_network,
                     input_tensor=net_input
                 )
-                
-                # Call here the functions for flops & density to avoid more
-                # elements in the graph before the
+
+                # 3. Call here the functions for flops & density to avoid more
+                # elements. The check is done because for some reason, the
+                # number of FLOPS changes during training.
                 if self.flops is None:
                     self.flops = compute_network_flops(
                         graph=tf.get_default_graph(),
@@ -311,6 +320,7 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                         collection_name=self.variable_scope
                     )
 
+                # 4. Build the fully-connected layer after the block
                 with tf.name_scope("L_FC"):
                     # Flatten and connect to the Dense Layer
                     ll_flat = tf.layers.flatten(
@@ -331,6 +341,7 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                         name="DROPOUT"
                     )
 
+                # 5. Build the prediction layer, based on a softmax
                 with tf.name_scope("L_PRED"):
                     # Logits layer
                     logits_layer = tf.layers.dense(
@@ -351,8 +362,8 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                         )
                     }
 
-                    # If we are asked for prediction only, we return the prediction
-                    # and stop adding nodes to the graph.
+                    # If we are asked for prediction only, we return the
+                    # prediction and stop adding nodes to the graph.
                     # pylint: disable=no-member
                     if mode == tf.estimator.ModeKeys.PREDICT:
                         return tf.estimator.EstimatorSpec(
@@ -360,6 +371,7 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                             predictions=predictions
                         )
 
+                # Build the training nodes
                 with tf.name_scope("L_TRAIN"):
                     # Loss
                     loss_layer = tf.losses.sparse_softmax_cross_entropy(
@@ -378,8 +390,8 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                             epsilon=10e-08,
                             name="OPT"
                         )
-                        # We say that we want to optimize the loss layer using the
-                        # optimizer.
+                        # We say that we want to optimize the loss layer using
+                        # the optimizer.
                         train_op = optimizer.minimize(
                             loss=loss_layer,
                             global_step=tf.train.get_global_step(),
@@ -393,6 +405,7 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                             train_op=train_op
                         )
 
+                # Build the evaluation nodes (regular accuracy).
                 with tf.name_scope("L_EVAL"):
                     # Evaluation metric is accuracy
                     eval_metric_ops = {
@@ -415,10 +428,12 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
 
     @property
     def weighted_log_density(self):
+        """Return the weighted version of the logarithm of the density."""
         return self.rho*math.log(self.density)
 
     @property
     def weighted_log_flops(self):
+        """Return the weighted version of the logarithm of the FLOPs."""
         return self.mu*math.log(self.flops)
 
 
@@ -435,6 +450,7 @@ def compute_network_density(graph, collection_name):
             nodes_counter += 1
             edges_counter += len(node.input)
 
+    # Note that we do not check for zero-division: on purpose to force failure.
     return edges_counter/nodes_counter
 
 
