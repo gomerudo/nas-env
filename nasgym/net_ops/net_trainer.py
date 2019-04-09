@@ -291,9 +291,10 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
             with tf.variable_scope(self.variable_scope):
                 # 1. Define the input placeholder
                 if len(self.input_shape) == 2:  # Reshape if necessary
+                    new_shape = [-1] + list(self.input_shape) + [1]
                     net_input = tf.reshape(
                         tensor=features["x"],
-                        shape=[-1] + list(self.input_shape) + [1],
+                        shape=new_shape,
                         name="L0_RESHAPE"
                     )
                 else:

@@ -27,7 +27,7 @@ def sequence_to_net(sequence, input_tensor):
     sequence = sort_sequence(sequence)
 
     # We use this list to see if all layers were used to construct the graph
-    non_used_layers = list(range(len(sequence) + 1))
+    non_used_layers = list(set([layer[0] for layer in sequence]))
 
     for layer_encoding in sequence:
         layer_index = layer_encoding[0]
@@ -36,7 +36,8 @@ def sequence_to_net(sequence, input_tensor):
         layer_pred1 = layer_encoding[3]  # Predecesor 1
         layer_pred2 = layer_encoding[4]  # Predecesor 2
 
-        # print("Adding layer %d" % layer_index)
+        if not layer_index:
+            continue
 
         if layer_type == LTYPE_ADD:
             # i.e. if no predecesors at all
@@ -108,18 +109,11 @@ def sequence_to_net(sequence, input_tensor):
                 )(tf_layers[layer_pred1])
 
         if layer_type == LTYPE_TERMINAL:
-            # print("Non used", non_used_layers)
-
             # We remove the terminal layer because we already visited it.
             try:
                 non_used_layers.remove(layer_index)
             except ValueError:
                 pass
-            # TODO: concat all the remaining elements. How?
-            #   1. Remove the terminal node from the non_used_layers list
-            #   2. If the remaining number of elements is one: do nothing
-            #   3. If there are more than 2 remaining elements:
-            #       3a. safe_concat one by one.
 
             # Force the end of the building process. We ignore any remaining
             # portion of the sequence.
@@ -237,9 +231,12 @@ def fix_tensor_shape(tensor_target, tensor_reference, free_axis=1, name="pad"):
     return padded_tensor
 
 
-def sort_sequence(sequence):
+def sort_sequence(sequence, as_list=True):
     """Sort the elements in the sequence, by layer_index."""
     narray = np.array(sequence)
     narray = narray[narray[:, 0].argsort(kind='mergesort')]
 
-    return narray.tolist()
+    if as_list:
+        return narray.tolist()
+    else:
+        return narray

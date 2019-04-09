@@ -12,20 +12,29 @@ from nasgym.net_ops.net_builder import LTYPE_CONVULUTION
 from nasgym.net_ops.net_builder import LTYPE_IDENTITY
 from nasgym.net_ops.net_builder import LTYPE_MAXPOOLING
 from nasgym.net_ops.net_builder import LTYPE_TERMINAL
+from nasgym.net_ops.net_builder import sort_sequence
+
+from nasgym.dataset_handlers.default_handler import AbstractDatasetHandler
+from nasgym.net_ops.net_trainer import EarlyStopNASTrainer
+from nasgym.utl.miscellaneous import infer_data_shape
+from nasgym.utl.miscellaneous import infer_n_classes
+from nasgym.utl.miscellaneous import normalize_dataset
+from nasgym.utl.miscellaneous import state_to_string
+from nasgym.utl.miscellaneous import compute_str_hash
 
 
 class DefaultNASEnv(gym.Env):
     """Default Neural Architecture Search (NAS) environment."""
 
     metadata = {'render.modes': ['human']}
-    reward_range = (0.0, float('inf'))
+    reward_range = (0.0, 100.0)
 
     def __init__(self, config_file="resources/nasenv.yml", max_steps=100,
-                 max_layers=10, dataset='meta-dataset', is_learning=True):
+                 max_layers=10, dataset_handler=None, is_learning=True):
         """Initialize the NAS environment, via a configuration file."""
         self.is_learning = is_learning
         self.max_steps = max_steps
-        self.dataset = dataset
+        # self.dataset = dataset
         self.max_layers = max_layers
 
         # Get the spaces
@@ -33,15 +42,22 @@ class DefaultNASEnv(gym.Env):
             self._load_from_file(config_file)
 
         # TODO: Create a dataset handler that will take care of switching tasks
-        self.dataset_handler = None
+        if dataset_handler is None:
+            raise ValueError(
+                "It is not possible to use a `None` dataset_handler. \
+Please use a valid one."
+            )
 
-        # TODO: set a default current_state (initial state) and call all
-        # defaults setters.
+        if not isinstance(dataset_handler, AbstractDatasetHandler):
+            raise TypeError(
+                "Invalid type for dataset_handler. Use a class of type \
+AbstractDatasetHandler"
+            )
+        self.dataset_handler = dataset_handler
+
+        # Reset the environment
         self.current_state = self.reset()
         self.step_count = 0
-
-        # TODO: An attribute storing the current dataset to work on
-        self.current_task = None
 
     def _load_from_file(self, config_file):
         act_s = None
@@ -65,30 +81,32 @@ class DefaultNASEnv(gym.Env):
 
     def step(self, action):
         """Perform an step in the environment, given an action."""
-        # TODO:
-        # 1. Step takes an action (a numeric value, I think...) and it will
-        #   change a position in the observation_space's `Box`.
-        self.current_state = NASHelper.perform_action(
+        self.current_state = NASEnvHelper.perform_action(
             self.state,
             action,
             self.actions_info
         )
-        # 2. It will then build the neural network (TensorFlow) with the
-        #   current state.
-        reward = NASHelper.train_network(self.current_state, self.current_task)
-        # 3. It will evaluate the neural network on the current_task (dataset)
-        #   and will return the accuracy to be used as the reward.
+        self.current_state = sort_sequence(self.current_state)
 
-        # 4. We return the tuple (state, reward, done, info)
+        reward = NASEnvHelper.reward(self.current_state, self.dataset_handler)
+
+        # Fix the reward if they go outside the boundaries: Not really needed.
+        reward = DefaultNASEnv.reward_range[1] \
+            if reward > DefaultNASEnv.reward_range[1] else reward
+        reward = DefaultNASEnv.reward_range[0] \
+            if reward < DefaultNASEnv.reward_range[0] else reward
+
+        # We return the tuple (state, reward, done, info)
         self.step_count += 1
         done = self.step_count == self.max_steps or \
-            NASHelper.is_terminal(action, self.actions_info)
+            NASEnvHelper.is_terminal(action, self.actions_info)
 
-        # Check whether or not we are done
-        # done_check = self.step_count - 1 == self.max_steps
-
-        # TODO: uild the the info
-        info_dict = {}
+        info_dict = {
+            'current_step': self.step_count,
+            'network_hash': compute_str_hash(
+                state_to_string(self.current_state)
+            )
+        }  # TODO: build the the info
 
         return self.current_state, reward, done, info_dict
 
@@ -104,15 +122,12 @@ class DefaultNASEnv(gym.Env):
 
     def render(self, mode='human'):
         """Render the environment, according to the specified mode."""
-        # TODO: think about how to render the network, maybe a tensorflow plot
-        #   or simply the vector as text.
         print(self.current_state)
 
     # This is not from gym.Env interface. This is used by our Meta-RL algorithm
-    def new_task(self):
+    def next_task(self):
         """Change the NN task by switching the dataset to be used."""
-        if self.dataset == 'meta-dataset':  # TODO: Change as global variable
-            self.current_task = self.dataset_handler.next_dataset()
+        self.dataset_handler.next_dataset()
 
 
 class DefaultNASEnvParser:
@@ -248,17 +263,17 @@ NAS environment definition. Minimun expected is {me}".format(me=min_expected)
             )
 
 
-class NASHelper:
+class NASEnvHelper:
     """Set of static methods that help the Default NAS environment."""
 
     @staticmethod
     def perform_action(space, action, action_info):
         """Perform an action in the environment's space."""
         # Always assert the action first
-        NASHelper.assert_valid_action(action, action_info)
+        NASEnvHelper.assert_valid_action(action, action_info)
 
         # Obtain the encoding
-        encoding = NASHelper.infer_action_encoding(action, action_info)
+        encoding = NASEnvHelper.infer_action_encoding(action, action_info)
 
         # Perform the modification in the space, given the type of action
 
@@ -282,7 +297,7 @@ class NASHelper:
     @staticmethod
     def is_remove_action(action, action_info):
         """Check if an action is a 'remove' action."""
-        NASHelper.assert_valid_action(action, action_info)
+        NASEnvHelper.assert_valid_action(action, action_info)
 
         # Check if it is the terminal state
         return action_info[action].startswith("remove")
@@ -290,13 +305,13 @@ class NASHelper:
     @staticmethod
     def infer_action_encoding(action, action_info):
         """Obtain the encoding of an action, given its identifier in a dict."""
-        NASHelper.assert_valid_action(action, action_info)
+        NASEnvHelper.assert_valid_action(action, action_info)
 
         action_str = action_info[action]
         action_arr = action_str.split("_")
         print(action_arr)
         # Depending of the type of action...
-        if NASHelper.is_remove_action(action, action_info):
+        if NASEnvHelper.is_remove_action(action, action_info):
             # Return only the number of the layer to remove
             return action_arr[1]
 
@@ -325,15 +340,63 @@ class NASHelper:
         return [layer_type, layer_kernel_size, layer_pred1, layer_pred2]
 
     @staticmethod
-    def train_network(state, dataset):
+    def reward(state, dataset_handler):
         """Perform the training of the network, given (state, dataset) pair."""
-        return 0.  # For now... TODO: implement it!
+        try:
+            train_X, train_y = dataset_handler.current_train_set()
+            val_X, val_y = dataset_handler.current_validation_set()
+
+            hash_state = compute_str_hash(state_to_string(state))
+
+            nas_trainer = EarlyStopNASTrainer(
+                encoded_network=state,
+                input_shape=infer_data_shape(train_X),
+                n_classes=infer_n_classes(train_y),
+                batch_size=256,
+                # TODO: Handle the log_path dynamically
+                log_path="./workspace/trainer-{h}".format(h=hash_state),
+                mu=0.5,
+                rho=0.5,
+                variable_scope="cnn-{h}".format(h=hash_state)
+            )
+
+            train_X = normalize_dataset(dataset=train_X, baseline=255)
+            train_y = train_y.astype(np.int32)
+
+            nas_trainer.train(
+                train_data=train_X,
+                train_labels=train_y,
+                train_input_fn="default",
+                n_epochs=12  # As specified by BlockQNN
+            )
+
+            val_X = normalize_dataset(dataset=val_X, baseline=255)
+            val_y = val_y.astype(np.int32)
+
+            res = nas_trainer.evaluate(
+                eval_data=val_X,
+                eval_labels=val_y,
+                eval_input_fn="default"
+            )
+
+            # TODO: Handle the database of experiments
+
+            accuracy = res['accuracy']
+            # Compute the refined reward as defined
+            reward = accuracy*100 - nas_trainer.weighted_log_density - \
+                nas_trainer.weighted_log_flops
+
+            return reward
+        except Exception as ex:
+            # Make logging or maybe store all errors in a file.
+            print("Failed with exception:", ex)
+            return 0.
 
     @staticmethod
     def is_terminal(action, action_info):
         """Check if an action induces a terminal state."""
         # Assert first
-        NASHelper.assert_valid_action(action, action_info)
+        NASEnvHelper.assert_valid_action(action, action_info)
 
         # Check if it is the terminal state
         return action_info[action].startswith("terminal")

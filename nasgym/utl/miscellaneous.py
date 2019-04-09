@@ -1,5 +1,6 @@
 """Diverse methods for the environment management."""
 
+import hashlib
 import numpy as np
 
 
@@ -19,5 +20,24 @@ def infer_n_classes(labels):
 
 
 def normalize_dataset(dataset, baseline=255):
-    """Normalize a dataset"""
-    return dataset/np.float32(255)
+    """Normalize a dataset."""
+    return dataset/np.float32(baseline)
+
+
+def compute_str_hash(string):
+    """Compute the hash of an string."""
+    # string = b("{phrase}".format(string))
+    return hashlib.md5(string.encode()).hexdigest()
+
+
+def state_to_string(state):
+    """Encode a state into a string."""
+    str_res = ""
+    for layer in state:
+        str_res += "{a}-{b}-{c}-{d};".format(
+            a=layer[0],
+            b=layer[1],
+            c=layer[2],
+            d=layer[3]
+        )
+    return str_res

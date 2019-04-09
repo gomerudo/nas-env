@@ -52,7 +52,6 @@ class TestDefaultNASTrainer(unittest.TestCase):
             log_path="./workspace/trainer_test",
             variable_scope="cnn"
         )
-        print([n.name for n in tf.get_default_graph().as_graph_def().node])
 
         nas_trainer.train(
             train_data=train_data,
