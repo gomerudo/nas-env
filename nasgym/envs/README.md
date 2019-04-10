@@ -12,4 +12,4 @@
 ## TODO
 
 - [ ] Decide on the actions to support
-- [ ] If the `nasenv.yml` is not found, create the default configuration with the content we have now. Ideas: create a function to return the hardcoded string of the YAML file.
+- [X] If the `nasenv.yml` is not found, create the default configuration with the content we have now. Ideas: create a function to return the hardcoded string of the YAML file. **Withdrawn**.

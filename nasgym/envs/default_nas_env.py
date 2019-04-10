@@ -21,6 +21,8 @@ from nasgym.utl.miscellaneous import infer_n_classes
 from nasgym.utl.miscellaneous import normalize_dataset
 from nasgym.utl.miscellaneous import state_to_string
 from nasgym.utl.miscellaneous import compute_str_hash
+from nasgym.utl.miscellaneous import get_current_timestamp
+from nasgym.database.default_db import DefaultExperimentsDatabase
 
 
 class DefaultNASEnv(gym.Env):
@@ -30,12 +32,20 @@ class DefaultNASEnv(gym.Env):
     reward_range = (0.0, 100.0)
 
     def __init__(self, config_file="resources/nasenv.yml", max_steps=100,
-                 max_layers=10, dataset_handler=None, is_learning=True):
+                 max_layers=10, dataset_handler=None, is_learning=True,
+                 db_file="workspace/db_experiments.csv"):
         """Initialize the NAS environment, via a configuration file."""
         self.is_learning = is_learning
         self.max_steps = max_steps
         # self.dataset = dataset
         self.max_layers = max_layers
+
+        self.db_manager = DefaultExperimentsDatabase(
+            file_name=db_file,
+            headers=["dataset-nethash", "netstring", "reward", "timestamp"],
+            pk_header="dataset-nethash",
+            overwrite=False
+        )
 
         # Get the spaces
         self.observation_space, self.action_space, self.actions_info = \
@@ -88,13 +98,41 @@ AbstractDatasetHandler"
         )
         self.current_state = sort_sequence(self.current_state)
 
-        reward = NASEnvHelper.reward(self.current_state, self.dataset_handler)
+        composed_id = "{d}-{h}".format(
+            d=self.dataset_handler.current_dataset_name(),
+            h=compute_str_hash(state_to_string(self.current_state))
+        )
 
-        # Fix the reward if they go outside the boundaries: Not really needed.
-        reward = DefaultNASEnv.reward_range[1] \
-            if reward > DefaultNASEnv.reward_range[1] else reward
-        reward = DefaultNASEnv.reward_range[0] \
-            if reward < DefaultNASEnv.reward_range[0] else reward
+        if self.db_manager.exists(composed_id):
+            prev = self.db_manager.get_row(composed_id)
+            reward = float(prev['reward'])
+            print(
+                "Skipping computationf of reward for {id} cause it has been \
+found in the DB".format(
+                    id=composed_id
+                )
+            )
+        else:
+            reward = NASEnvHelper.reward(
+                self.current_state,
+                self.dataset_handler
+            )
+
+            # Fix the reward if they go outside the boundaries: Not really
+            # needed.
+            reward = DefaultNASEnv.reward_range[1] \
+                if reward > DefaultNASEnv.reward_range[1] else reward
+            reward = DefaultNASEnv.reward_range[0] \
+                if reward < DefaultNASEnv.reward_range[0] else reward
+            self.db_manager.add(
+                {
+                    "dataset-nethash": composed_id,
+                    "netstring": state_to_string(self.current_state),
+                    "reward": reward,
+                    "timestamp": get_current_timestamp(),
+                }
+            )
+            self.db_manager.save()
 
         # We return the tuple (state, reward, done, info)
         self.step_count += 1
@@ -103,10 +141,8 @@ AbstractDatasetHandler"
 
         info_dict = {
             'current_step': self.step_count,
-            'network_hash': compute_str_hash(
-                state_to_string(self.current_state)
-            )
-        }  # TODO: build the the info
+            "dataset-nethash": composed_id,
+        }
 
         return self.current_state, reward, done, info_dict
 

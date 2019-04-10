@@ -27,6 +27,10 @@ class AbstractDatasetHandler(ABC):
     def current_validation_set(self):
         """Return the current validation set."""
 
+    @abstractmethod
+    def current_dataset_name(self):
+        """Return the current dataset name."""
+
 
 class DefaultDatasetHandler(AbstractDatasetHandler):
     """The Default Dataset Handler."""
@@ -51,6 +55,10 @@ class DefaultDatasetHandler(AbstractDatasetHandler):
     def current_validation_set(self):
         """Return the current validation set."""
         return self.val_X, self.val_y
+
+    def current_dataset_name(self):
+        """Return the current dataset name."""
+        return self.name
 
     def next_dataset(self):
         """Do nothing."""

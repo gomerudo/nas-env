@@ -2,6 +2,8 @@
 
 import hashlib
 import numpy as np
+import datetime
+import time
 
 
 def is_valid_config_file(config_file):
@@ -41,3 +43,8 @@ def state_to_string(state):
             d=layer[3]
         )
     return str_res
+
+
+def get_current_timestamp():
+    ts = time.time()
+    return datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
