@@ -54,8 +54,6 @@ class TestFunctions(unittest.TestCase):
             (4, 5, 0, 1, 3),  # Layer 4: Convolution(Layer1)
             (5, 7, 0, 0, 0),  # Layer 5: Convolution(Layer4)
         ]
-        workspace_dir = "./workspace"
-        self.graphs_dir = "{workspace}/graph".format(workspace=workspace_dir)
 
     def test_compute_densitity_network(self):
         """Verify density computation of the network defined in setUp().
@@ -77,13 +75,6 @@ class TestFunctions(unittest.TestCase):
 
             # Do the parsing
             sequence_to_net(self.net_nsc, input_placeholder)
-
-            # Save the graph
-            file_writer = tf.summary.FileWriter(
-                self.graphs_dir,
-                tf.get_default_graph()
-            )
-            file_writer.close()
 
         # Computed beforehand
         target_density = 1.281767955801105
@@ -128,13 +119,6 @@ class TestFunctions(unittest.TestCase):
 
             # Do the parsing
             sequence_to_net(self.net_nsc, input_placeholder)
-
-            # Save the graph
-            file_writer = tf.summary.FileWriter(
-                self.graphs_dir,
-                tf.get_default_graph()
-            )
-            file_writer.close()
 
         # Value computed beforehad
         target_flops = 75146

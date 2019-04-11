@@ -4,7 +4,7 @@
 
 ## FIXME: minor
 
-- [ ] Verify why the logged information when applying `evaluate` after `train` is not showing train's information.
+- [X] Verify why the logged information when applying `evaluate` after `train` is not showing train's information.
 
 ## TODO
 
@@ -16,4 +16,4 @@
 - [ ] Make tests to verify the behavior of the `done` flag in scenarios such as `remove` operations and `max_steps`. Also, verify that the returned `state` is correct.
 
 ### `test_net_builder.py`
-- [ ] Test building weir architectures: wrong predecesors, unordered layers (caused by `remove` operations). This is related to the #2 of previous subsection.
+- [X] Test building weir architectures: wrong predecesors, unordered layers (caused by `remove` operations). This is related to the #2 of previous subsection.

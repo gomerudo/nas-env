@@ -23,9 +23,6 @@ def sequence_to_net(sequence, input_tensor):
     }
     current_layer = None
 
-    # First, sort the sequence to try to avoid problems
-    sequence = sort_sequence(sequence)
-
     # We use this list to see if all layers were used to construct the graph
     non_used_layers = list(set([layer[0] for layer in sequence]))
 
@@ -46,12 +43,10 @@ def sequence_to_net(sequence, input_tensor):
 
             # TODO: check if exception is raised for non existant tf_layers[i]
             with tf.name_scope("L{i}_ADD".format(i=layer_index)):
-                current_layer = tf.keras.layers.add(
-                    inputs=[
-                        tf_layers[layer_pred1],
-                        tf_layers[layer_pred2],
-                    ],
-                    name="Add"
+                current_layer = safe_add(
+                    tensor_a=tf_layers[layer_pred1],
+                    tensor_b=tf_layers[layer_pred2],
+                    name="SafeAdd"
                 )
 
         if layer_type == LTYPE_AVGPOOLING:
@@ -178,6 +173,33 @@ def safe_concat(tensor_a, tensor_b, name):
     )
 
     return concatenated
+
+
+def safe_add(tensor_a, tensor_b, name):
+    """Concatenate two tensors even if they have different shapes.
+
+    The fix of the shapes is done with a zero-padding on both tensors.
+    """
+    fixed_b = fix_tensor_shape(
+        tensor_target=tensor_b,
+        tensor_reference=tensor_a,
+        free_axis=1
+    )
+    fixed_a = fix_tensor_shape(
+        tensor_target=tensor_a,
+        tensor_reference=tensor_b,
+        free_axis=1
+    )
+
+    added = tf.keras.layers.add(
+        inputs=[
+            fixed_a,
+            fixed_b,
+        ],
+        name=name
+    )
+
+    return added
 
 
 def is_same_rank(tensor_a, tensor_b):

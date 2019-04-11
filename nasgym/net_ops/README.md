@@ -3,7 +3,7 @@
 ## FIXME: Crutial
 
 - [ ] For `net_builder.py`. Check why BatchNormalization is giving more outputs in graph, which were not indicated in the code.
-- [ ] For `net_builder.py`. Check if `Add` node needs padding too: design tests with maxpooling and no-padding.
+- [X] For `net_builder.py`. Check if `Add` node needs padding too: design tests with maxpooling and no-padding.
 
 ## FIXME: Minor
 
@@ -14,8 +14,8 @@
 
 ### `net_builder.py`
 
-- [ ] Currently, the network is built given two main assumptions: a) the layers are ordered by `layer_index`, and b) the predecesors of the layer are always lower than the layer's index. The first assumption should not cause any special issues when not satisfied cause we can order the layers, however if the second assumption is not satisfied then there will be errors cause the predecesor is not yet included. We need to think of a solution. Ideas: 1) Make the network non-valid and return `reward=0`, 2) Previosuly to the building process, try to optimize the architecture representation algorithmically (this can be **too much work**). I think the second option is encouraged cause otherwise the agent will ignore some architectures (note that not all the time we can optimize the arechitecture representation, but maybe sometimes will be). **ANALYZE EVERYTHING STATED HERE**.
-- [ ] Remove the dependency on the sorting for the building of the network.
+- [X] Currently, the network is built given two main assumptions: a) the layers are ordered by `layer_index`, and b) the predecesors of the layer are always lower than the layer's index. The first assumption should not cause any special issues when not satisfied cause we can order the layers, however if the second assumption is not satisfied then there will be errors cause the predecesor is not yet included. We need to think of a solution. Ideas: 1) Make the network non-valid and return `reward=0`, 2) Previosuly to the building process, try to optimize the architecture representation algorithmically (this can be **too much work**). I think the second option is encouraged cause otherwise the agent will ignore some architectures (note that not all the time we can optimize the arechitecture representation, but maybe sometimes will be). **ANALYZE EVERYTHING STATED HERE**.
+- [X] Remove the dependency on the sorting for the building of the network.
 
 ### `net_trainer.py`
 
