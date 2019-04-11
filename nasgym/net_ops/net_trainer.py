@@ -445,9 +445,10 @@ def compute_network_density(graph, collection_name):
 
     nodes_counter = 0
     edges_counter = 0
-
+    
     for node in graph_def.node:
         if node.name.startswith("{pre}/".format(pre=collection_name)):
+            print("Density", node.name)
             nodes_counter += 1
             edges_counter += len(node.input)
 

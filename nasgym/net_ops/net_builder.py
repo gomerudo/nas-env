@@ -138,7 +138,7 @@ def sequence_to_net(sequence, input_tensor):
     #   The last layer before terminate is never used, but if there are two or
     #   more, then we need to concatenate one by one.
     if non_used_layers:
-        print("Non used", non_used_layers)
+        # print("Non used", non_used_layers)
         pivot = tf_layers[non_used_layers[0]]
         for idx in range(1, len(non_used_layers)):
             with tf.name_scope("END_CONCAT{i}".format(i=idx)):
