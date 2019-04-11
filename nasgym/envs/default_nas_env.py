@@ -210,16 +210,18 @@ class DefaultNASEnvParser:
                     layer_config['kernel_size']
 
                 pred1_list = [0] if not layer_config['pred1'] else \
-                    range(0, self.max_nlayers + 1)
+                    range(0, self.max_nlayers)
 
-                pred2_list = [0] if not layer_config['pred2'] else \
-                    range(0, self.max_nlayers + 1)
+                # pred2_list = [0] if not layer_config['pred2'] else \
+                #     range(0, self.max_nlayers + 1)
 
                 # For every kernel
                 for kernel in kernels_list:
                     # For every predecesor1
                     for c_pred1 in pred1_list:
                         # For every predecesor2
+                        pred2_list = [0] if not layer_config['pred2'] else \
+                            range(0, c_pred1)
                         for c_pred2 in pred2_list:
                             action_type = \
                                 "{type}_k-{kernel}_pred1-{pred1}_pred2-\
@@ -227,10 +229,10 @@ class DefaultNASEnvParser:
                             action_info[counter] = action_type
                             counter += 1
 
-        # At the end, add REMOVE actions
-        for layer in range(self.max_nlayers):
-            action_info[counter] = "remove_{l}".format(l=layer)
-            counter += 1
+        # # At the end, add REMOVE actions
+        # for layer in range(self.max_nlayers):
+        #     action_info[counter] = "remove_{l}".format(l=layer)
+        #     counter += 1
 
         # The actual set of actions
         # action_set = list(range(counter))

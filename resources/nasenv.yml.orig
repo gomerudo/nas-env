@@ -19,6 +19,11 @@ nasenv:
             kernel_size: [1, 3]
             pred1: True
             pred2: False
+        - identity:
+            id: 4
+            kernel_size: Null
+            pred1: True
+            pred2: False
         - add:
             id: 5
             kernel_size: Null

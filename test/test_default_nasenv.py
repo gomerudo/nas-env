@@ -35,9 +35,10 @@ class TestDefaultNASParser(unittest.TestCase):
 
         # Assert the type
         self.assertTrue(isinstance(dnase_parser.action_space, spaces.Discrete))
-
+        # print(dnase_parser.action_info)
         # Assert the size
-        expected_dim = 341
+        x = dnase_parser.max_nlayers
+        expected_dim = x*x + 6*x + 1
         self.assertEqual(dnase_parser.action_space.n, expected_dim)
 
 
@@ -69,7 +70,8 @@ class TestDefaultNASEnv(unittest.TestCase):
 
         # Assert the dimension of the action space: it should be 288 for
         # default configuration
-        expected_dim = 341
+        x = assigned_max_layers
+        expected_dim = x*x + 6*x + 1
         self.assertEqual(nasenv.action_space.n, expected_dim)
 
     def test_action_flow(self):
