@@ -2,8 +2,6 @@
 
 from setuptools import setup, find_packages
 
-# print(find_packages(exclude=["*.test", "*.test.*", "test.*", "test"]))
-
 setup(
     name='nasgym',
     version='0.0.1',
