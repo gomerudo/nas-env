@@ -1,0 +1,36 @@
+nasenv:
+    name: Default Environment
+    version: 1.0
+    max_nlayers: 10
+    encoding: NSC
+    layers:
+        - convolution:
+            id: 1
+            kernel_size: [1, 3, 5]
+            pred1: True
+            pred2: False
+        - maxpooling:
+            id: 2
+            kernel_size: [1, 3]
+            pred1: True
+            pred2: False
+        - avgpooling:
+            id: 3
+            kernel_size: [1, 3]
+            pred1: True
+            pred2: False
+        - add:
+            id: 5
+            kernel_size: Null
+            pred1: True
+            pred2: True
+        - concat:
+            id: 6
+            kernel_size: Null
+            pred1: True
+            pred2: True
+        - terminal:
+            id: 7
+            kernel_size: Null
+            pred1: False
+            pred2: False
