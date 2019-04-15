@@ -1,10 +1,21 @@
-"""Create a default environment for Neural Architecture Search."""
+"""Create a default environment for Neural Architecture Search.
+
+The default environment executes actions as in BlockQNN. In this module we
+expose the main class `DefaultNASEnv`, together with two more helper classes:
+`DefaultNASEnvParser` - in charge of parsing a YML with the definition of the
+environment - and `NASEnvHelper` - with static methods that perform the main
+computations and call methods from net_trainer mainly.
+
+The NAS environment, makes use of OpenAI's Gym environment abstract class. To
+extend more NAS environments, use this class as a model.
+"""
 
 import numpy as np
 import yaml
 import gym
 from gym import spaces
-from nasgym.utl.miscellaneous import is_valid_config_file
+from nasgym.database.default_db import DefaultExperimentsDatabase
+from nasgym.dataset_handlers.default_handler import AbstractDatasetHandler
 from nasgym.net_ops.net_builder import LTYPE_ADD
 from nasgym.net_ops.net_builder import LTYPE_AVGPOOLING
 from nasgym.net_ops.net_builder import LTYPE_CONCAT
@@ -12,17 +23,15 @@ from nasgym.net_ops.net_builder import LTYPE_CONVULUTION
 from nasgym.net_ops.net_builder import LTYPE_IDENTITY
 from nasgym.net_ops.net_builder import LTYPE_MAXPOOLING
 from nasgym.net_ops.net_builder import LTYPE_TERMINAL
-from nasgym.net_ops.net_builder import sort_sequence
-
-from nasgym.dataset_handlers.default_handler import AbstractDatasetHandler
+from nasgym.net_ops.net_utils import sort_sequence
 from nasgym.net_ops.net_trainer import EarlyStopNASTrainer
-from nasgym.utl.miscellaneous import infer_data_shape
-from nasgym.utl.miscellaneous import infer_n_classes
-from nasgym.utl.miscellaneous import normalize_dataset
-from nasgym.utl.miscellaneous import state_to_string
 from nasgym.utl.miscellaneous import compute_str_hash
 from nasgym.utl.miscellaneous import get_current_timestamp
-from nasgym.database.default_db import DefaultExperimentsDatabase
+from nasgym.utl.miscellaneous import infer_data_shape
+from nasgym.utl.miscellaneous import infer_n_classes
+from nasgym.utl.miscellaneous import is_valid_config_file
+from nasgym.utl.miscellaneous import normalize_dataset
+from nasgym.utl.miscellaneous import state_to_string
 
 
 class DefaultNASEnv(gym.Env):
@@ -32,14 +41,16 @@ class DefaultNASEnv(gym.Env):
     reward_range = (0.0, 100.0)
 
     def __init__(self, config_file="resources/nasenv.yml", max_steps=100,
-                 max_layers=10, dataset_handler=None, is_learning=True,
-                 db_file="workspace/db_experiments.csv"):
+                 max_layers=10, dataset_handler=None,
+                 db_file="workspace/db_experiments.csv", log_path="workspace"):
         """Initialize the NAS environment, via a configuration file."""
-        self.is_learning = is_learning
+        # 1. Assign the class' properties
         self.max_steps = max_steps
-        # self.dataset = dataset
         self.max_layers = max_layers
+        self.log_path = log_path
 
+        # 2. Instanciate the database of experiments and its columns. Note that
+        #    we never overwrite the file but append.
         self.db_manager = DefaultExperimentsDatabase(
             file_name=db_file,
             headers=["dataset-nethash", "netstring", "reward", "timestamp"],
@@ -47,11 +58,13 @@ class DefaultNASEnv(gym.Env):
             overwrite=False
         )
 
-        # Get the spaces
+        # 3. Get the Gym spaces: observtions and actions
         self.observation_space, self.action_space, self.actions_info = \
             self._load_from_file(config_file)
 
-        # TODO: Create a dataset handler that will take care of switching tasks
+        # 4. Validate and assign the dataset handler that will provide the
+        #    image classification task to solve (this task might change
+        #    between experiments)
         if dataset_handler is None:
             raise ValueError(
                 "It is not possible to use a `None` dataset_handler. \
@@ -65,57 +78,59 @@ AbstractDatasetHandler"
             )
         self.dataset_handler = dataset_handler
 
-        # Reset the environment
+        # 5. Reset the environment and the step count
         self.current_state = self.reset()
         self.step_count = 0
 
     def _load_from_file(self, config_file):
-        act_s = None
-        obs_s = None
-
+        # 1. Check the validity of the configuration file
         if not is_valid_config_file(config_file):
             raise ValueError(
                 "Invalid configuration file. Please use a valid format."
             )
 
-        # Load parameters from file
+        # 2. Load parameters from file
         file_parser = DefaultNASEnvParser(config_file)
 
-        # Assign the desired return variables
+        # 3. Assign the desired return variables: the actual spaces
         act_s = file_parser.action_space
         act_info = file_parser.action_info
         obs_s = file_parser.observation_space
 
-        # Finally, return the two objects
+        # Finally, return the the spaces and the dictionary of actions.
         return obs_s, act_s, act_info
 
     def step(self, action):
         """Perform an step in the environment, given an action."""
+        # 1. Perform the action: this will alter the internal state
         self.current_state = NASEnvHelper.perform_action(
             self.state,
             action,
             self.actions_info
         )
+        # 2. We always sort the sequence
         self.current_state = sort_sequence(self.current_state)
 
+        # 3. We build the composed ID: dataset_name + hash_of_sequence
         composed_id = "{d}-{h}".format(
             d=self.dataset_handler.current_dataset_name(),
             h=compute_str_hash(state_to_string(self.current_state))
         )
 
+        # 4. Compute the reward: if it exists already in the DB, skip training,
+        #    otherwise proceed to training.
         if self.db_manager.exists(composed_id):
             prev = self.db_manager.get_row(composed_id)
             reward = float(prev['reward'])
             print(
                 "Skipping computationf of reward for {id} cause it has been \
-found in the DB".format(
-                    id=composed_id
-                )
+found in the DB".format(id=composed_id)
             )
         else:
             reward = NASEnvHelper.reward(
                 self.current_state,
-                self.dataset_handler
+                self.dataset_handler,
+                self.log_path
             )
 
             # Fix the reward if they go outside the boundaries: Not really
@@ -134,16 +149,21 @@ found in the DB".format(
             )
             self.db_manager.save()
 
-        # We return the tuple (state, reward, done, info)
+        # 5. Increase the number of steps cause we are done with the action
         self.step_count += 1
+
+        # 6. Verify whether or not we are done: if we reached the max number of
+        #    steps or if the action we performmed was a terminal action.
         done = self.step_count == self.max_steps or \
             NASEnvHelper.is_terminal(action, self.actions_info)
 
+        # 7. Build additional information we want to return (as in gym.Env)
         info_dict = {
             'current_step': self.step_count,
             "dataset-nethash": composed_id,
         }
 
+        # 8. Return the results as specified in gym.Env
         return self.current_state, reward, done, info_dict
 
     def reset(self):
@@ -158,11 +178,14 @@ found in the DB".format(
 
     def render(self, mode='human'):
         """Render the environment, according to the specified mode."""
-        print(self.current_state)
+        for row in self.current_state:
+            print(row)
 
     # This is not from gym.Env interface. This is used by our Meta-RL algorithm
     def next_task(self):
         """Change the NN task by switching the dataset to be used."""
+        # We always rely on the dataset handler, since the switching is
+        # independent from the environment
         self.dataset_handler.next_dataset()
 
 
@@ -212,9 +235,6 @@ class DefaultNASEnvParser:
                 pred1_list = [0] if not layer_config['pred1'] else \
                     range(0, self.max_nlayers)
 
-                # pred2_list = [0] if not layer_config['pred2'] else \
-                #     range(0, self.max_nlayers + 1)
-
                 # For every kernel
                 for kernel in kernels_list:
                     # For every predecesor1
@@ -228,11 +248,6 @@ class DefaultNASEnvParser:
 {pred2}".format(type=layer_key, kernel=kernel, pred1=c_pred1, pred2=c_pred2)
                             action_info[counter] = action_type
                             counter += 1
-
-        # # At the end, add REMOVE actions
-        # for layer in range(self.max_nlayers):
-        #     action_info[counter] = "remove_{l}".format(l=layer)
-        #     counter += 1
 
         # The actual set of actions
         # action_set = list(range(counter))
@@ -314,7 +329,6 @@ class NASEnvHelper:
         encoding = NASEnvHelper.infer_action_encoding(action, action_info)
 
         # Perform the modification in the space, given the type of action
-
         if isinstance(encoding, int):  # It is a remove action
             space[encoding] = np.zeros(5)
         elif isinstance(encoding, list):  # It is just another action
@@ -325,11 +339,12 @@ class NASEnvHelper:
                     available_layer = i
                     break
 
-            # If found, return the 
+            # If found, assign the encoding to the available layer.
             if available_layer in range(0, space.shape[0]):
                 space[available_layer] = \
                     np.array([available_layer + 1] + encoding)
 
+        # Return the space
         return space
 
     @staticmethod
@@ -378,46 +393,49 @@ class NASEnvHelper:
         return [layer_type, layer_kernel_size, layer_pred1, layer_pred2]
 
     @staticmethod
-    def reward(state, dataset_handler):
+    def reward(state, dataset_handler, log_path="./workspace"):
         """Perform the training of the network, given (state, dataset) pair."""
         try:
-            train_X, train_y = dataset_handler.current_train_set()
-            val_X, val_y = dataset_handler.current_validation_set()
+            train_features, train_labels = dataset_handler.current_train_set()
+            val_features, val_labels = dataset_handler.current_validation_set()
 
             hash_state = compute_str_hash(state_to_string(state))
 
             nas_trainer = EarlyStopNASTrainer(
                 encoded_network=state,
-                input_shape=infer_data_shape(train_X),
-                n_classes=infer_n_classes(train_y),
+                input_shape=infer_data_shape(train_features),
+                n_classes=infer_n_classes(train_labels),
                 batch_size=256,
-                # TODO: Handle the log_path dynamically
-                log_path="./workspace/trainer-{h}".format(h=hash_state),
+                log_path="{lp}/trainer-{h}".format(lp=log_path, h=hash_state),
                 mu=0.5,
                 rho=0.5,
                 variable_scope="cnn-{h}".format(h=hash_state)
             )
 
-            train_X = normalize_dataset(dataset=train_X, baseline=255)
-            train_y = train_y.astype(np.int32)
+            train_features = normalize_dataset(
+                dataset=train_features,
+                baseline=255
+            )
+            train_labels = train_labels.astype(np.int32)
 
             nas_trainer.train(
-                train_data=train_X,
-                train_labels=train_y,
+                train_data=train_features,
+                train_labels=train_labels,
                 train_input_fn="default",
                 n_epochs=12  # As specified by BlockQNN
             )
 
-            val_X = normalize_dataset(dataset=val_X, baseline=255)
-            val_y = val_y.astype(np.int32)
+            val_features = normalize_dataset(
+                dataset=val_features,
+                baseline=255
+            )
+            val_labels = val_labels.astype(np.int32)
 
             res = nas_trainer.evaluate(
-                eval_data=val_X,
-                eval_labels=val_y,
+                eval_data=val_features,
+                eval_labels=val_labels,
                 eval_input_fn="default"
             )
-
-            # TODO: Handle the database of experiments
 
             accuracy = res['accuracy']
             # Compute the refined reward as defined
@@ -425,9 +443,9 @@ class NASEnvHelper:
                 nas_trainer.weighted_log_flops
 
             return reward
-        except Exception as ex:
-            # Make logging or maybe store all errors in a file.
-            print("Failed with exception:", ex)
+        except Exception as ex:  # pylint: disable=broad-except
+            # TODO: Make sure exceptions are printed correctly.
+            print("Reward computation failed with exception:", ex)
             return 0.
 
     @staticmethod

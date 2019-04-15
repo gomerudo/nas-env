@@ -1,9 +1,9 @@
 """Diverse methods for the environment management."""
 
-import hashlib
-import numpy as np
 import datetime
+import hashlib
 import time
+import numpy as np
 
 
 def is_valid_config_file(config_file):
@@ -28,7 +28,6 @@ def normalize_dataset(dataset, baseline=255):
 
 def compute_str_hash(string):
     """Compute the hash of an string."""
-    # string = b("{phrase}".format(string))
     return hashlib.md5(string.encode()).hexdigest()
 
 
@@ -46,5 +45,8 @@ def state_to_string(state):
 
 
 def get_current_timestamp():
-    ts = time.time()
-    return datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+    """Obtain the current system's timestamp."""
+    current_time = time.time()
+    return datetime.datetime.fromtimestamp(current_time).strftime(
+        '%Y-%m-%d %H:%M:%S'
+    )

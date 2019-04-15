@@ -69,7 +69,7 @@ class TestDefaultExperimentsDatabase(unittest.TestCase):
         self.assertTrue(pd_test.shape[0] == len(self.data))
         self.assertTrue(pd_test.shape[1] == len(self.headers))
 
-        for i, row in pd_test.iterrows():            
+        for i, row in pd_test.iterrows():
             self.assertTrue(self.data[i][0] == row[self.headers[0]])
             self.assertTrue(self.data[i][1] == row[self.headers[1]])
             self.assertTrue(self.data[i][2] == row[self.headers[2]])
@@ -167,7 +167,7 @@ class TestDefaultExperimentsDatabase(unittest.TestCase):
         )
 
         repetitions = 2
-        for i in range(repetitions):                
+        for _ in range(repetitions):
             for row in self.data:
                 to_add = {
                     self.headers[0]: row[0],

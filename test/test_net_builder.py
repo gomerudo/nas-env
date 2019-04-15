@@ -20,7 +20,7 @@ import shutil
 import unittest
 import tensorflow as tf
 from nasgym.net_ops.net_builder import sequence_to_net
-from nasgym.net_ops.net_builder import sort_sequence
+from nasgym.net_ops.net_utils import sort_sequence
 
 # Set this always on top
 tf.logging.set_verbosity(tf.logging.INFO)

@@ -77,7 +77,7 @@ class TestFunctions(unittest.TestCase):
             sequence_to_net(self.net_nsc, input_placeholder)
 
         # Computed beforehand
-        target_density = 1.281767955801105
+        target_density = 1.2756756756756757  # Before: 1.281767955801105
         # Assert the value
         self.assertEqual(
             compute_network_density(tf.get_default_graph(), "cnn"),
@@ -124,7 +124,11 @@ class TestFunctions(unittest.TestCase):
         target_flops = 75146
         # Make the assert operation.
         self.assertEqual(
-            compute_network_flops(tf.get_default_graph(), "cnn"),
+            compute_network_flops(
+                tf.get_default_graph(),
+                "cnn",
+                "workspace/flops_test"
+            ),
             target_flops
         )
 
@@ -262,7 +266,7 @@ class TestEarlyStopNASTrainer(unittest.TestCase):
 
         # Workspace directory
         workspace_dir = "./workspace"
-        self.training_dir = "{workspace}/trainer_test".format(
+        self.training_dir = "{workspace}/trainer_test_earlystop".format(
             workspace=workspace_dir
         )
 

@@ -35,12 +35,13 @@ class AbstractDatasetHandler(ABC):
 class DefaultDatasetHandler(AbstractDatasetHandler):
     """The Default Dataset Handler."""
 
-    def __init__(self, train_X, train_y, val_X, val_y, name):
+    def __init__(self, train_features, train_labels, val_features, val_labels,
+                 name):
         """Constructor."""
-        self.train_X = train_X
-        self.train_y = train_y
-        self.val_X = val_X
-        self.val_y = val_y
+        self.train_features = train_features
+        self.train_labels = train_labels
+        self.val_features = val_features
+        self.val_labels = val_labels
 
         super(DefaultDatasetHandler, self).__init__(name=name)
 
@@ -50,11 +51,11 @@ class DefaultDatasetHandler(AbstractDatasetHandler):
 
     def current_train_set(self):
         """Return the current train set."""
-        return self.train_X, self.train_y
+        return self.train_features, self.train_labels
 
     def current_validation_set(self):
         """Return the current validation set."""
-        return self.val_X, self.val_y
+        return self.val_features, self.val_labels
 
     def current_dataset_name(self):
         """Return the current dataset name."""
@@ -62,4 +63,5 @@ class DefaultDatasetHandler(AbstractDatasetHandler):
 
     def next_dataset(self):
         """Do nothing."""
+        # pylint: disable=unnecessary-pass
         pass

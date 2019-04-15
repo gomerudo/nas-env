@@ -1,7 +1,6 @@
 """Classes and methods for Net building."""
 
 import logging
-import numpy as np
 import tensorflow as tf
 from nasgym.net_ops import LTYPE_ADD
 from nasgym.net_ops import LTYPE_AVGPOOLING
@@ -39,9 +38,8 @@ def sequence_to_net(sequence, input_tensor):
         if layer_type == LTYPE_ADD:
             # i.e. if no predecesors at all
             if not layer_pred1 or not layer_pred2:
-                logging.warning("No predecessors for layer %d" % layer_index)
+                logging.warning("No predecessors for layer %d", layer_index)
 
-            # TODO: check if exception is raised for non existant tf_layers[i]
             with tf.name_scope("L{i}_ADD".format(i=layer_index)):
                 current_layer = safe_add(
                     tensor_a=tf_layers[layer_pred1],
@@ -59,7 +57,7 @@ def sequence_to_net(sequence, input_tensor):
         if layer_type == LTYPE_CONCAT:
             # i.e. if no predecesors at all
             if not layer_pred1 or not layer_pred2:
-                logging.warning("No predecessors for layer %i" % layer_index)
+                logging.warning("No predecessors for layer %d", layer_index)
 
             with tf.name_scope("L{i}_CONCAT".format(i=layer_index)):
                 current_layer = safe_concat(
@@ -251,14 +249,3 @@ def fix_tensor_shape(tensor_target, tensor_reference, free_axis=1, name="pad"):
     )
 
     return padded_tensor
-
-
-def sort_sequence(sequence, as_list=True):
-    """Sort the elements in the sequence, by layer_index."""
-    narray = np.array(sequence)
-    narray = narray[narray[:, 0].argsort(kind='mergesort')]
-
-    if as_list:
-        return narray.tolist()
-    else:
-        return narray

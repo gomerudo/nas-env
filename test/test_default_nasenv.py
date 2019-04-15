@@ -37,7 +37,7 @@ class TestDefaultNASParser(unittest.TestCase):
         self.assertTrue(isinstance(dnase_parser.action_space, spaces.Discrete))
         # print(dnase_parser.action_info)
         # Assert the size
-        x = dnase_parser.max_nlayers
+        x = dnase_parser.max_nlayers  # pylint: disable=invalid-name
         expected_dim = x*x + 6*x + 1
         self.assertEqual(dnase_parser.action_space.n, expected_dim)
 
@@ -51,12 +51,18 @@ class TestDefaultNASEnv(unittest.TestCase):
         assigned_max_steps = 10
         assigned_max_layers = 10
 
+        (train_data, train_labels), (eval_data, eval_labels) = \
+            tf.keras.datasets.mnist.load_data()
+
+        handler = DefaultDatasetHandler(
+            train_data, train_labels, eval_data, eval_labels, "mnist"
+        )
+
         nasenv = DefaultNASEnv(
             config_file=NAS_YML_FILE,
             max_steps=assigned_max_steps,
             max_layers=assigned_max_layers,
-            dataset_handler='meta-dataset',
-            is_learning=True
+            dataset_handler=handler
         )
 
         # Assert the basic properties are set correctly
@@ -70,11 +76,11 @@ class TestDefaultNASEnv(unittest.TestCase):
 
         # Assert the dimension of the action space: it should be 288 for
         # default configuration
-        x = assigned_max_layers
+        x = assigned_max_layers  # pylint: disable=invalid-name
         expected_dim = x*x + 6*x + 1
         self.assertEqual(nasenv.action_space.n, expected_dim)
 
-    def test_action_flow(self):
+    def test_action_flow_short_werror(self):
         """Test the creation of the environment."""
         # Load training and eval data
         (train_data, train_labels), (eval_data, eval_labels) = \
@@ -90,11 +96,40 @@ class TestDefaultNASEnv(unittest.TestCase):
             max_steps=10,
             max_layers=10,
             dataset_handler=handler,
-            is_learning=True
         )
 
-        set_actions = [0, 175, 2]
+        set_actions = [0, 158, 2]
         # set_actions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+        for action in set_actions:
+            state, reward, done, info = nasenv.step(action)
+            print("State:\n {s}".format(s=state))
+            print("Reward: {s}".format(s=reward))
+            print("Done: {s}".format(s=done))
+            print("Info: {s}".format(s=info))
+            if done:
+                break
+
+    def test_action_flow_long(self):
+        """Test the creation of the environment."""
+        # Load training and eval data
+        (train_data, train_labels), (eval_data, eval_labels) = \
+            tf.keras.datasets.mnist.load_data()
+
+        handler = DefaultDatasetHandler(
+            train_data, train_labels, eval_data, eval_labels, "mnist"
+        )
+
+        # Creation of the environment
+        nasenv = DefaultNASEnv(
+            config_file=NAS_YML_FILE,
+            max_steps=10,
+            max_layers=10,
+            dataset_handler=handler,
+        )
+
+        # set_actions = [0, 175, 2]
+        set_actions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
         for action in set_actions:
             state, reward, done, info = nasenv.step(action)

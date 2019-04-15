@@ -4,6 +4,8 @@ import math
 from abc import ABC, abstractmethod
 import tensorflow as tf
 from nasgym.net_ops.net_builder import sequence_to_net
+from nasgym.net_ops.net_utils import compute_network_density
+from nasgym.net_ops.net_utils import compute_network_flops
 
 
 class NasEnvTrainerBase(ABC):
@@ -312,7 +314,8 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                 if self.flops is None:
                     self.flops = compute_network_flops(
                         graph=tf.get_default_graph(),
-                        collection_name=self.variable_scope
+                        collection_name=self.variable_scope,
+                        logdir=self.log_path
                     )
 
                 if self.density is None:
@@ -436,40 +439,3 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
     def weighted_log_flops(self):
         """Return the weighted version of the logarithm of the FLOPs."""
         return self.mu*math.log(self.flops)
-
-
-def compute_network_density(graph, collection_name):
-    """Compute the Density of a TensorFlow Neural Network."""
-    graph = tf.get_default_graph()
-    graph_def = graph.as_graph_def()
-
-    nodes_counter = 0
-    edges_counter = 0
-    
-    for node in graph_def.node:
-        if node.name.startswith("{pre}/".format(pre=collection_name)):
-            print("Density", node.name)
-            nodes_counter += 1
-            edges_counter += len(node.input)
-
-    # Note that we do not check for zero-division: on purpose to force failure.
-    return edges_counter/nodes_counter
-
-
-def compute_network_flops(graph, collection_name):
-    """Compute the Density of a TensorFlow Neural Network."""
-    # Build the options
-    opts = tf.profiler.ProfileOptionBuilder(
-        tf.profiler.ProfileOptionBuilder.float_operation()
-    ).with_node_names(
-        start_name_regexes=["{name}.*".format(name=collection_name)]
-    ).build()
-
-    # Get the flops object
-    flops = tf.profiler.profile(
-        graph,
-        options=opts
-    )
-
-    # pylint: disable=no-member
-    return flops.total_float_ops
