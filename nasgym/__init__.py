@@ -5,23 +5,23 @@ from gym.envs.registration import register
 from nasgym.dataset_handlers.default_handler import DefaultDatasetHandler
 
 
-(train_data, train_labels), (eval_data, eval_labels) = \
-    tf.keras.datasets.mnist.load_data()
+# (train_data, train_labels), (eval_data, eval_labels) = \
+#     tf.keras.datasets.mnist.load_data()
 
-handler = DefaultDatasetHandler(
-    train_data, train_labels, eval_data, eval_labels, "mnist"
-)
+# handler = DefaultDatasetHandler(
+#     train_data, train_labels, eval_data, eval_labels, "mnist"
+# )
 
-config_file = "nas-env/resources/nasenv.yml"
+# config_file = "nas-env/resources/nasenv.yml"
 
-register(
-    id='NAS_mnist-v1',
-    entry_point='nasgym.envs:DefaultNASEnv',
-    kwargs={
-        'config_file': config_file,
-        'dataset_handler': handler
-    }
-)
+# register(
+#     id='NAS_mnist-v1',
+#     entry_point='nasgym.envs:DefaultNASEnv',
+#     kwargs={
+#         'config_file': config_file,
+#         'dataset_handler': handler
+#     }
+# )
 
 (train_data, train_labels), (eval_data, eval_labels) = \
     tf.keras.datasets.cifar10.load_data()
@@ -29,6 +29,8 @@ register(
 handler = DefaultDatasetHandler(
     train_data, train_labels, eval_data, eval_labels, "cifar10"
 )
+
+config_file = "nas-env/resources/nasenv.yml"
 
 register(
     id='NAS_cifar10-v1',
