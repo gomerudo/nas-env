@@ -60,8 +60,11 @@ class DefaultNASTrainer(NasEnvTrainerBase):
 
     def _set_estimator(self):
         if self.classifier is None:
+            sess_config = tf.ConfigProto(log_device_placement=True)
+            run_config = tf.estimator.RunConfig(session_config=sess_config)
             # pylint: disable=no-member
             self.classifier = tf.estimator.Estimator(
+                config=run_config,
                 model_fn=self.build_model_fn(),
                 model_dir="{root_dir}/{model_dir}".format(
                     root_dir=self.log_path,

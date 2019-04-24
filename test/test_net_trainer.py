@@ -180,15 +180,17 @@ class TestDefaultNASTrainer(unittest.TestCase):
     def test_train(self):
         """Test the Default Training procedure."""
         tf.reset_default_graph()
-        if os.path.isdir(self.training_dir):
-            shutil.rmtree(self.training_dir)
+        custom_training_dir = "{r}/{t}".format(r=self.training_dir, t="train")
+
+        if os.path.isdir(custom_training_dir):
+            shutil.rmtree(custom_training_dir)
 
         nas_trainer = DefaultNASTrainer(
             encoded_network=self.net_nsc,
             input_shape=infer_data_shape(self.train_data),
             n_classes=infer_n_classes(self.train_labels),
             batch_size=self.batch_size,
-            log_path=self.training_dir,
+            log_path=custom_training_dir,
             variable_scope="cnn"
         )
 
@@ -198,20 +200,22 @@ class TestDefaultNASTrainer(unittest.TestCase):
             train_input_fn="default"
         )
 
-        self.assertTrue(os.path.isdir(self.training_dir))
+        self.assertTrue(os.path.isdir(custom_training_dir))
 
     def test_evaluate(self):
         """Test the Default Training procedure."""
         tf.reset_default_graph()
-        if os.path.isdir(self.training_dir):
-            shutil.rmtree(self.training_dir)
+        custom_training_dir = "{r}/{t}".format(r=self.training_dir, t="eval")
+
+        if os.path.isdir(custom_training_dir):
+            shutil.rmtree(custom_training_dir)
 
         nas_trainer = DefaultNASTrainer(
             encoded_network=self.net_nsc,
             input_shape=infer_data_shape(self.train_data),
             n_classes=infer_n_classes(self.train_labels),
             batch_size=self.batch_size,
-            log_path=self.training_dir,
+            log_path=custom_training_dir,
             variable_scope="cnn"
         )
 
@@ -227,7 +231,7 @@ class TestDefaultNASTrainer(unittest.TestCase):
             eval_input_fn="default"
         )
 
-        self.assertTrue(os.path.isdir(self.training_dir))
+        self.assertTrue(os.path.isdir(custom_training_dir))
         self.assertTrue("accuracy" in list(res.keys()))
 
 
@@ -273,15 +277,17 @@ class TestEarlyStopNASTrainer(unittest.TestCase):
     def test_train(self):
         """Test the Default Training procedure."""
         tf.reset_default_graph()
-        if os.path.isdir(self.training_dir):
-            shutil.rmtree(self.training_dir)
+        custom_training_dir = "{r}/{t}".format(r=self.training_dir, t="train")
+
+        if os.path.isdir(custom_training_dir):
+            shutil.rmtree(custom_training_dir)
 
         nas_trainer = EarlyStopNASTrainer(
             encoded_network=self.net_nsc,
             input_shape=infer_data_shape(self.train_data),
             n_classes=infer_n_classes(self.train_labels),
             batch_size=self.batch_size,
-            log_path=self.training_dir,
+            log_path=custom_training_dir,
             mu=0.5,
             rho=0.5,
             variable_scope="cnn"
@@ -293,20 +299,22 @@ class TestEarlyStopNASTrainer(unittest.TestCase):
             train_input_fn="default"
         )
 
-        self.assertTrue(os.path.isdir(self.training_dir))
+        self.assertTrue(os.path.isdir(custom_training_dir))
 
     def test_evaluate(self):
         """Test the Default Training procedure."""
         tf.reset_default_graph()
-        if os.path.isdir(self.training_dir):
-            shutil.rmtree(self.training_dir)
+        custom_training_dir = "{r}/{t}".format(r=self.training_dir, t="eval")
+
+        if os.path.isdir(custom_training_dir):
+            shutil.rmtree(custom_training_dir)
 
         nas_trainer = EarlyStopNASTrainer(
             encoded_network=self.net_nsc,
             input_shape=infer_data_shape(self.train_data),
             n_classes=infer_n_classes(self.train_labels),
             batch_size=self.batch_size,
-            log_path=self.training_dir,
+            log_path=custom_training_dir,
             mu=0.5,
             rho=0.5,
             variable_scope="cnn"
@@ -324,7 +332,7 @@ class TestEarlyStopNASTrainer(unittest.TestCase):
             eval_input_fn="default"
         )
 
-        self.assertTrue(os.path.isdir(self.training_dir))
+        self.assertTrue(os.path.isdir(custom_training_dir))
         self.assertTrue("accuracy" in list(res.keys()))
 
         self.assertTrue(nas_trainer.density is not None)
