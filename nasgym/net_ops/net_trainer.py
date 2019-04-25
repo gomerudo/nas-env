@@ -1,5 +1,6 @@
 """Module to implement training operations for Neural Networks."""
 
+import os
 import math
 from abc import ABC, abstractmethod
 import tensorflow as tf
@@ -57,12 +58,31 @@ class DefaultNASTrainer(NasEnvTrainerBase):
             variable_scope=variable_scope
         )
         self._set_estimator()
+        print("NUM_REPLICAS_SET_TO", self.distributed_nreplicas)
 
     def _set_estimator(self):
         if self.classifier is None:
-            sess_config = tf.ConfigProto(log_device_placement=True)
+            # Set distributed strategy
+            # TODO: Improve handling of environment variables
+            if os.environ.get['TF_ENABLE_MIRRORED_STRATEGY'] is not None:
+                mirrored_strategy = tf.distribute.MirroredStrategy()
+                self.distributed_nreplicas = \
+                    mirrored_strategy.num_replicas_in_sync
+            else:
+                mirrored_strategy = None
+                self.distributed_nreplicas = 1
+
+            if os.environ.get['TF_ENABLE_LOG_DEVICE_PLACEMENT'] is not None:
+                sess_config = tf.ConfigProto(log_device_placement=True)
+            else:
+                sess_config = None
+
             # pylint: disable=no-member
-            run_config = tf.estimator.RunConfig(session_config=sess_config)
+            run_config = tf.estimator.RunConfig(
+                session_config=sess_config,
+                train_distribute=mirrored_strategy,
+                eval_distribute=mirrored_strategy
+            )
             # pylint: disable=no-member
             self.classifier = tf.estimator.Estimator(
                 config=run_config,
@@ -214,7 +234,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                     train_input_fn = tf.estimator.inputs.numpy_input_fn(
                         x={"x": train_data},
                         y=train_labels,
-                        batch_size=self.batch_size,
+                        batch_size=self.batch_size/self.distributed_nreplicas,
                         num_epochs=None,
                         shuffle=True
                     )
@@ -257,6 +277,7 @@ value has been provided. Options are: 'default'"
                         x={"x": eval_data},
                         y=eval_labels,
                         num_epochs=1,
+                        batch_size=self.batch_size/self.distributed_nreplicas,
                         shuffle=False
                     )
 
