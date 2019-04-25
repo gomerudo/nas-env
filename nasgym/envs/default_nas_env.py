@@ -10,6 +10,7 @@ The NAS environment, makes use of OpenAI's Gym environment abstract class. To
 extend more NAS environments, use this class as a model.
 """
 
+import time
 import numpy as np
 import yaml
 import gym
@@ -53,7 +54,13 @@ class DefaultNASEnv(gym.Env):
         #    we never overwrite the file but append.
         self.db_manager = DefaultExperimentsDatabase(
             file_name=db_file,
-            headers=["dataset-nethash", "netstring", "reward", "timestamp"],
+            headers=[
+                "dataset-nethash",
+                "netstring",
+                "reward",
+                "timestamp",
+                "running_time"
+            ],
             pk_header="dataset-nethash",
             overwrite=False
         )
@@ -122,29 +129,35 @@ AbstractDatasetHandler"
         if self.db_manager.exists(composed_id):
             prev = self.db_manager.get_row(composed_id)
             reward = float(prev['reward'])
+            running_time = int(prev['running_time'])
+
             print(
                 "Skipping computationf of reward for {id} cause it has been \
 found in the DB".format(id=composed_id)
             )
         else:
+            start = time.time()
             reward = NASEnvHelper.reward(
                 self.current_state,
                 self.dataset_handler,
                 self.log_path
             )
+            end = time.time()
 
             # Fix the reward if they go outside the boundaries: Not really
-            # needed.
+            # needed but just to make sure...
             reward = DefaultNASEnv.reward_range[1] \
                 if reward > DefaultNASEnv.reward_range[1] else reward
             reward = DefaultNASEnv.reward_range[0] \
                 if reward < DefaultNASEnv.reward_range[0] else reward
+
             self.db_manager.add(
                 {
                     "dataset-nethash": composed_id,
                     "netstring": state_to_string(self.current_state),
                     "reward": reward,
                     "timestamp": get_current_timestamp(),
+                    "running_time": int(end - start),
                 }
             )
             self.db_manager.save()
@@ -161,6 +174,7 @@ found in the DB".format(id=composed_id)
         info_dict = {
             'current_step': self.step_count,
             "dataset-nethash": composed_id,
+            "running_time": running_time
         }
 
         # 8. Return the results as specified in gym.Env

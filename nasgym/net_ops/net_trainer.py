@@ -61,6 +61,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
     def _set_estimator(self):
         if self.classifier is None:
             sess_config = tf.ConfigProto(log_device_placement=True)
+            # pylint: disable=no-member
             run_config = tf.estimator.RunConfig(session_config=sess_config)
             # pylint: disable=no-member
             self.classifier = tf.estimator.Estimator(
