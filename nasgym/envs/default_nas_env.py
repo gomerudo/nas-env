@@ -143,7 +143,7 @@ found in the DB".format(id=composed_id)
                 self.log_path
             )
             end = time.time()
-
+            running_time = int(end - start)
             # Fix the reward if they go outside the boundaries: Not really
             # needed but just to make sure...
             reward = DefaultNASEnv.reward_range[1] \
@@ -157,7 +157,7 @@ found in the DB".format(id=composed_id)
                     "netstring": state_to_string(self.current_state),
                     "reward": reward,
                     "timestamp": get_current_timestamp(),
-                    "running_time": int(end - start),
+                    "running_time": running_time,
                 }
             )
             self.db_manager.save()
