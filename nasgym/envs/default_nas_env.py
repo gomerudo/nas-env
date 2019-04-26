@@ -60,7 +60,8 @@ class DefaultNASEnv(gym.Env):
                 "netstring",
                 "reward",
                 "timestamp",
-                "running_time"
+                "running_time",
+                "is_valid"
             ],
             pk_header="dataset-nethash",
             overwrite=False
@@ -131,6 +132,7 @@ AbstractDatasetHandler"
             prev = self.db_manager.get_row(composed_id)
             reward = float(prev['reward'])
             running_time = int(prev['running_time'])
+            status = int(prev['is_valid'])
 
             print(
                 "Skipping computationf of reward for {id} cause it has been \
@@ -138,7 +140,7 @@ found in the DB".format(id=composed_id)
             )
         else:
             start = time.time()
-            reward = NASEnvHelper.reward(
+            reward, status = NASEnvHelper.reward(
                 self.current_state,
                 self.dataset_handler,
                 self.log_path
@@ -159,6 +161,7 @@ found in the DB".format(id=composed_id)
                     "reward": reward,
                     "timestamp": get_current_timestamp(),
                     "running_time": running_time,
+                    "is_valid": status
                 }
             )
             self.db_manager.save()
@@ -175,7 +178,8 @@ found in the DB".format(id=composed_id)
         info_dict = {
             'current_step': self.step_count,
             "dataset-nethash": composed_id,
-            "running_time": running_time
+            "running_time": running_time,
+            "is_valid": status
         }
 
         # 8. Return the results as specified in gym.Env
@@ -443,7 +447,7 @@ class NASEnvHelper:
                 n_epochs=12  # As specified by BlockQNN
             )
 
-            print("Normalizing the validaation set")
+            print("Normalizing the validation set")
             val_features = normalize_dataset(
                 dataset=val_features,
                 baseline=255
@@ -463,12 +467,11 @@ class NASEnvHelper:
             reward = accuracy*100 - nas_trainer.weighted_log_density - \
                 nas_trainer.weighted_log_flops
 
-            return reward
+            return reward, True
         except Exception as ex:  # pylint: disable=broad-except
             # TODO: Make sure exceptions are printed correctly.
-            print("Reward computation failed with exception:", ex)
-            traceback.print_tb(ex.__traceback__)
-            return 0.
+            print("Reward computation failed with exception:", str(ex))
+            return 0., False
 
     @staticmethod
     def is_terminal(action, action_info):
