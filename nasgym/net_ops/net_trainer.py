@@ -64,7 +64,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
         if self.classifier is None:
             # Set distributed strategy
             # TODO: Improve handling of environment variables
-            if os.environ.get['TF_ENABLE_MIRRORED_STRATEGY'] is not None:
+            if os.environ.get('TF_ENABLE_MIRRORED_STRATEGY') is not None:
                 mirrored_strategy = tf.distribute.MirroredStrategy()
                 self.distributed_nreplicas = \
                     mirrored_strategy.num_replicas_in_sync
@@ -72,7 +72,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                 mirrored_strategy = None
                 self.distributed_nreplicas = 1
 
-            if os.environ.get['TF_ENABLE_LOG_DEVICE_PLACEMENT'] is not None:
+            if os.environ.get('TF_ENABLE_LOG_DEVICE_PLACEMENT') is not None:
                 sess_config = tf.ConfigProto(log_device_placement=True)
             else:
                 sess_config = None

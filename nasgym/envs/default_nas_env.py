@@ -10,6 +10,7 @@ The NAS environment, makes use of OpenAI's Gym environment abstract class. To
 extend more NAS environments, use this class as a model.
 """
 
+import traceback
 import time
 import numpy as np
 import yaml
@@ -466,6 +467,7 @@ class NASEnvHelper:
         except Exception as ex:  # pylint: disable=broad-except
             # TODO: Make sure exceptions are printed correctly.
             print("Reward computation failed with exception:", ex)
+            traceback.print_tb(ex.__traceback__)
             return 0.
 
     @staticmethod
