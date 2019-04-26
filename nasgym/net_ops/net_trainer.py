@@ -234,7 +234,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                     train_input_fn = tf.estimator.inputs.numpy_input_fn(
                         x={"x": train_data},
                         y=train_labels,
-                        batch_size=self.batch_size/self.distributed_nreplicas,
+                        batch_size=int(self.batch_size/self.distributed_nreplicas),
                         num_epochs=None,
                         shuffle=True
                     )
@@ -277,7 +277,7 @@ value has been provided. Options are: 'default'"
                         x={"x": eval_data},
                         y=eval_labels,
                         num_epochs=1,
-                        batch_size=self.batch_size/self.distributed_nreplicas,
+                        batch_size=int(self.batch_size/self.distributed_nreplicas),
                         shuffle=False
                     )
 
