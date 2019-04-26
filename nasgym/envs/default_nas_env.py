@@ -415,13 +415,11 @@ class NASEnvHelper:
     def reward(state, dataset_handler, log_path="./workspace"):
         """Perform the training of the network, given (state, dataset) pair."""
         try:
-            print("Obtaining train/validation sets")
             train_features, train_labels = dataset_handler.current_train_set()
             val_features, val_labels = dataset_handler.current_validation_set()
 
             hash_state = compute_str_hash(state_to_string(state))
 
-            print("Obtaining the trainer")
             nas_trainer = EarlyStopNASTrainer(
                 encoded_network=state,
                 input_shape=infer_data_shape(train_features),
@@ -432,14 +430,13 @@ class NASEnvHelper:
                 rho=0.5,
                 variable_scope="cnn-{h}".format(h=hash_state)
             )
-            print("Normalizing the training set")
+
             train_features = normalize_dataset(
                 dataset=train_features,
                 baseline=255
             )
             train_labels = train_labels.astype(np.int32)
 
-            print("Training the network")
             nas_trainer.train(
                 train_data=train_features,
                 train_labels=train_labels,
@@ -447,21 +444,18 @@ class NASEnvHelper:
                 n_epochs=12  # As specified by BlockQNN
             )
 
-            print("Normalizing the validation set")
             val_features = normalize_dataset(
                 dataset=val_features,
                 baseline=255
             )
             val_labels = val_labels.astype(np.int32)
 
-            print("Evaluating the validation set")
             res = nas_trainer.evaluate(
                 eval_data=val_features,
                 eval_labels=val_labels,
                 eval_input_fn="default"
             )
 
-            print("Reporting the accuracy")
             accuracy = res['accuracy']
             # Compute the refined reward as defined
             reward = accuracy*100 - nas_trainer.weighted_log_density - \
