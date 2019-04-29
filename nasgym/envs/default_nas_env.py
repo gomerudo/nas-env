@@ -10,7 +10,6 @@ The NAS environment, makes use of OpenAI's Gym environment abstract class. To
 extend more NAS environments, use this class as a model.
 """
 
-import traceback
 import time
 import numpy as np
 import yaml
@@ -70,6 +69,25 @@ class DefaultNASEnv(gym.Env):
         # 3. Get the Gym spaces: observtions and actions
         self.observation_space, self.action_space, self.actions_info = \
             self._load_from_file(config_file)
+
+        # Store the actions_info as a csv
+        actions_info_df = DefaultExperimentsDatabase(
+            file_name="{root}/{name}".format(
+                root=log_path,
+                name="actions_info.csv"
+            ),
+            headers=[
+                "id",
+                "action",
+            ],
+            pk_header="id",
+            overwrite=True
+        )
+
+        for key, value in self.actions_info.items():
+            actions_info_df.add({'id': key, 'action': value})
+        actions_info_df.save()
+        # print("The actions info used for this env is:\n", self.actions_info)
 
         # 4. Validate and assign the dataset handler that will provide the
         #    image classification task to solve (this task might change
@@ -180,9 +198,22 @@ found in the DB".format(id=composed_id)
 
         # 7. Build additional information we want to return (as in gym.Env)
         info_dict = {
+            "composed_id": composed_id,
             "original_state": bkp_original,
+            "original_state_hashed": compute_str_hash(
+                state_to_string(bkp_original)
+            ),
             "action_performed": action,
+            "action_inferred": NASEnvHelper.infer_action_encoding(
+                action,
+                self.actions_info,
+            ),
             "end_state": self.current_state,
+            "end_state_hashed": compute_str_hash(
+                state_to_string(self.current_state)
+            ),
+            "reward": reward,
+            "done": done,
             "step_count": self.step_count,
             "running_time": running_time,
             "was_valid_transition": status,
@@ -387,7 +418,7 @@ class NASEnvHelper:
 
         action_str = action_info[action]
         action_arr = action_str.split("_")
-        print(action_arr)
+
         # Depending of the type of action...
         if NASEnvHelper.is_remove_action(action, action_info):
             # Return only the number of the layer to remove
@@ -469,8 +500,9 @@ class NASEnvHelper:
 
             return reward, True
         except Exception as ex:  # pylint: disable=broad-except
-            # TODO: Make sure exceptions are printed correctly.
-            print("Reward computation failed with exception:", str(ex))
+            print(
+                "Reward computation for network {h} failed with exception of \
+type {t}. Message is: {m}".format(h=hash_state, t=type(ex), m=str(ex)))
             return 0., False
 
     @staticmethod
