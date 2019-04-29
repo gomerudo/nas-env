@@ -112,11 +112,13 @@ AbstractDatasetHandler"
     def step(self, action):
         """Perform an step in the environment, given an action."""
         # 1. Perform the action: this will alter the internal state
+        bkp_original = self.current_state
         self.current_state = NASEnvHelper.perform_action(
             self.state,
             action,
             self.actions_info
         )
+        bkp_original = self.current_state
         # 2. We always sort the sequence
         self.current_state = sort_sequence(self.current_state)
 
@@ -171,15 +173,19 @@ found in the DB".format(id=composed_id)
 
         # 6. Verify whether or not we are done: if we reached the max number of
         #    steps or if the action we performmed was a terminal action.
+        #    Additionally, we consider 'dead' an invalid layer (cause the next
+        #    ones will always be invalid too.)
         done = self.step_count == self.max_steps or \
-            NASEnvHelper.is_terminal(action, self.actions_info)
+            NASEnvHelper.is_terminal(action, self.actions_info) or not status
 
         # 7. Build additional information we want to return (as in gym.Env)
         info_dict = {
-            'current_step': self.step_count,
-            "dataset-nethash": composed_id,
+            "original_state": bkp_original,
+            "action_performed": action,
+            "end_state": self.current_state,
+            "step_count": self.step_count,
             "running_time": running_time,
-            "is_valid": status
+            "was_valid_transition": status,
         }
 
         # 8. Return the results as specified in gym.Env
