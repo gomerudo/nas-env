@@ -106,7 +106,7 @@ AbstractDatasetHandler"
         self.dataset_handler = dataset_handler
 
         # 5. Reset the environment and the step count
-        self.current_state = self.reset()
+        self.state = self.reset()
         self.step_count = 0
 
     def _load_from_file(self, config_file):
@@ -130,20 +130,19 @@ AbstractDatasetHandler"
     def step(self, action):
         """Perform an step in the environment, given an action."""
         # 1. Perform the action: this will alter the internal state
-        bkp_original = self.current_state
-        self.current_state = NASEnvHelper.perform_action(
+        bkp_original = self.state.copy()
+        self.state = NASEnvHelper.perform_action(
             self.state,
             action,
             self.actions_info
         )
-        bkp_original = self.current_state
         # 2. We always sort the sequence
-        self.current_state = sort_sequence(self.current_state)
+        self.state = sort_sequence(self.state, as_list=False)
 
         # 3. We build the composed ID: dataset_name + hash_of_sequence
         composed_id = "{d}-{h}".format(
             d=self.dataset_handler.current_dataset_name(),
-            h=compute_str_hash(state_to_string(self.current_state))
+            h=compute_str_hash(state_to_string(self.state))
         )
 
         # 4. Compute the reward: if it exists already in the DB, skip training,
@@ -161,7 +160,7 @@ found in the DB".format(id=composed_id)
         else:
             start = time.time()
             reward, status = NASEnvHelper.reward(
-                self.current_state,
+                self.state,
                 self.dataset_handler,
                 self.log_path
             )
@@ -177,7 +176,7 @@ found in the DB".format(id=composed_id)
             self.db_manager.add(
                 {
                     "dataset-nethash": composed_id,
-                    "netstring": state_to_string(self.current_state),
+                    "netstring": self.state,
                     "reward": reward,
                     "timestamp": get_current_timestamp(),
                     "running_time": running_time,
@@ -198,29 +197,29 @@ found in the DB".format(id=composed_id)
 
         # 7. Build additional information we want to return (as in gym.Env)
         info_dict = {
+            "step_count": self.step_count,
+            "valid": status,
             "composed_id": composed_id,
             "original_state": bkp_original,
             "original_state_hashed": compute_str_hash(
                 state_to_string(bkp_original)
             ),
-            "action_performed": action,
+            "end_state": self.state,
+            "end_state_hashed": compute_str_hash(
+                state_to_string(self.state)
+            ),
+            "action_id": action,
             "action_inferred": NASEnvHelper.infer_action_encoding(
                 action,
                 self.actions_info,
             ),
-            "end_state": self.current_state,
-            "end_state_hashed": compute_str_hash(
-                state_to_string(self.current_state)
-            ),
             "reward": reward,
             "done": done,
-            "step_count": self.step_count,
             "running_time": running_time,
-            "was_valid_transition": status,
         }
 
         # 8. Return the results as specified in gym.Env
-        return self.current_state, reward, done, info_dict
+        return self.state, reward, done, info_dict
 
     def reset(self):
         """Reset the environment's state."""
@@ -234,7 +233,7 @@ found in the DB".format(id=composed_id)
 
     def render(self, mode='human'):
         """Render the environment, according to the specified mode."""
-        for row in self.current_state:
+        for row in self.state:
             print(row)
 
     # This is not from gym.Env interface. This is used by our Meta-RL algorithm

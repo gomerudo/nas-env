@@ -49,7 +49,11 @@ def compute_network_flops(graph, collection_name, logdir="workspace"):
 
 def sort_sequence(sequence, as_list=True):
     """Sort the elements in the sequence, by layer_index."""
-    narray = np.array(sequence)
+    if isinstance(sequence, np.ndarray):
+        narray = sequence
+    else:
+        narray = np.array(sequence)
+
     narray = narray[narray[:, 0].argsort(kind='mergesort')]
 
     if as_list:
