@@ -50,7 +50,7 @@ def sequence_to_net(sequence, input_tensor):
         if layer_type == LTYPE_AVGPOOLING:
             with tf.name_scope("L{i}_AVGPOOL".format(i=layer_index)):
                 current_layer = tf.keras.layers.AveragePooling2D(
-                    pool_size=layer_kernel_size,
+                    pool_size=(layer_kernel_size, layer_kernel_size),
                     name="AvgPooling"
                 )(tf_layers[layer_pred1])
 
@@ -79,7 +79,7 @@ def sequence_to_net(sequence, input_tensor):
 
                 conv_layer = tf.keras.layers.Conv2D(
                     filters=64,
-                    kernel_size=layer_kernel_size,
+                    kernel_size=(layer_kernel_size, layer_kernel_size),
                     padding="same",
                     name="Conv"
                 )(relu_layer)
@@ -96,7 +96,7 @@ def sequence_to_net(sequence, input_tensor):
         if layer_type == LTYPE_MAXPOOLING:
             with tf.name_scope("L{i}_MAXPOOL".format(i=layer_index)):
                 current_layer = tf.keras.layers.MaxPool2D(
-                    pool_size=layer_kernel_size,
+                    pool_size=(layer_kernel_size, layer_kernel_size),
                     name="MaxPooling",
                     padding="same"
                 )(tf_layers[layer_pred1])
