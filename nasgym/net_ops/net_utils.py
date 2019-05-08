@@ -54,9 +54,9 @@ def sort_sequence(sequence, as_list=True):
     else:
         narray = np.array(sequence)
 
-    narray = narray[narray[:, 0].argsort(kind='mergesort')]
+    res = narray[narray[:, 0].argsort(kind='mergesort')]
 
     if as_list:
-        return narray.tolist()
+        return res.tolist()
     else:
-        return narray
+        return res

@@ -228,6 +228,7 @@ found in the DB".format(id=composed_id)
             shape=self.observation_space.shape,
             dtype=np.int32
         )
+        self.step_count = 0
 
         return self.state
 
@@ -378,6 +379,7 @@ class NASEnvHelper:
     def perform_action(space, action, action_info):
         """Perform an action in the environment's space."""
         # Always assert the action first
+        target = space.copy()
         NASEnvHelper.assert_valid_action(action, action_info)
 
         # Obtain the encoding
@@ -385,22 +387,22 @@ class NASEnvHelper:
 
         # Perform the modification in the space, given the type of action
         if isinstance(encoding, int):  # It is a remove action
-            space[encoding] = np.zeros(5)
+            target[encoding] = np.zeros(5)
         elif isinstance(encoding, list):  # It is just another action
-            # Search an available space
-            available_layer = -1
-            for i, layer in enumerate(space):
+            # Search an available row
+            available_row = -1
+            for i, layer in enumerate(target):
                 if not layer[0]:
-                    available_layer = i
+                    available_row = i
                     break
 
             # If found, assign the encoding to the available layer.
-            if available_layer in range(0, space.shape[0]):
-                space[available_layer] = \
-                    np.array([available_layer + 1] + encoding)
+            if available_row in range(0, target.shape[0]):
+                target[available_row] = \
+                    np.array([np.amax(target[:, 0], axis=0) + 1] + encoding)
 
-        # Return the space
-        return space
+        # Return the target space
+        return target
 
     @staticmethod
     def is_remove_action(action, action_info):
@@ -457,7 +459,7 @@ class NASEnvHelper:
             hash_state = compute_str_hash(state_to_string(state))
 
             nas_trainer = EarlyStopNASTrainer(
-                encoded_network=state,
+                encoded_network=state.copy(),
                 input_shape=infer_data_shape(train_features),
                 n_classes=infer_n_classes(train_labels),
                 batch_size=256,

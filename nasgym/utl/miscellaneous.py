@@ -35,11 +35,12 @@ def state_to_string(state):
     """Encode a state into a string."""
     str_res = ""
     for layer in state:
-        str_res += "{a}-{b}-{c}-{d};".format(
+        str_res += "{a}-{b}-{c}-{d}-{e};".format(
             a=layer[0],
             b=layer[1],
             c=layer[2],
-            d=layer[3]
+            d=layer[3],
+            e=layer[4],
         )
     return str_res
 
