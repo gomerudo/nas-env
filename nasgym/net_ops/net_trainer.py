@@ -75,7 +75,9 @@ class DefaultNASTrainer(NasEnvTrainerBase):
             if os.environ.get('TF_ENABLE_LOG_DEVICE_PLACEMENT') is not None:
                 sess_config = tf.ConfigProto(log_device_placement=True)
             else:
-                sess_config = None
+                sess_config = tf.ConfigProto()
+            # pylint: disable=no-member
+            sess_config.gpu_options.allow_growth = True
 
             # pylint: disable=no-member
             run_config = tf.estimator.RunConfig(
