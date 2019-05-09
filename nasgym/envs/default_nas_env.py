@@ -47,7 +47,7 @@ class DefaultNASEnv(gym.Env):
         """Initialize the NAS environment, via a configuration file."""
         # 1. Assign the class' properties
         self.max_steps = max_steps
-        self.max_layers = max_layers
+        self.max_layers = max_layers  # TODO: not used now, remove?
         self.log_path = log_path
 
         # 2. Instanciate the database of experiments and its columns. Note that
@@ -58,9 +58,12 @@ class DefaultNASEnv(gym.Env):
                 "dataset-nethash",
                 "netstring",
                 "reward",
+                "accuracy",
+                "density",
+                "flops",
                 "timestamp",
                 "running_time",
-                "is_valid"
+                "is_valid",
             ],
             pk_header="dataset-nethash",
             overwrite=False
@@ -87,7 +90,6 @@ class DefaultNASEnv(gym.Env):
         for key, value in self.actions_info.items():
             actions_info_df.add({'id': key, 'action': value})
         actions_info_df.save()
-        # print("The actions info used for this env is:\n", self.actions_info)
 
         # 4. Validate and assign the dataset handler that will provide the
         #    image classification task to solve (this task might change
@@ -150,6 +152,9 @@ AbstractDatasetHandler"
         if self.db_manager.exists(composed_id):
             prev = self.db_manager.get_row(composed_id)
             reward = float(prev['reward'])
+            accuracy = float(prev['accuracy'])
+            density = float(prev['density'])
+            flops = float(prev['flops'])
             running_time = int(prev['running_time'])
             status = int(prev['is_valid'])
 
@@ -159,7 +164,7 @@ found in the DB".format(id=composed_id)
             )
         else:
             start = time.time()
-            reward, status = NASEnvHelper.reward(
+            reward, accuracy, density, flops, status = NASEnvHelper.reward(
                 self.state,
                 self.dataset_handler,
                 self.log_path
@@ -178,6 +183,9 @@ found in the DB".format(id=composed_id)
                     "dataset-nethash": composed_id,
                     "netstring": self.state,
                     "reward": reward,
+                    "accuracy": accuracy,
+                    "density": density,
+                    "flops": flops,
                     "timestamp": get_current_timestamp(),
                     "running_time": running_time,
                     "is_valid": status
@@ -457,13 +465,16 @@ class NASEnvHelper:
             val_features, val_labels = dataset_handler.current_validation_set()
 
             hash_state = compute_str_hash(state_to_string(state))
+            composed_id = "{d}-{h}".format(
+                d=dataset_handler.current_dataset_name(), h=hash_state
+            )
 
             nas_trainer = EarlyStopNASTrainer(
                 encoded_network=state.copy(),
                 input_shape=infer_data_shape(train_features),
                 n_classes=infer_n_classes(train_labels),
                 batch_size=256,
-                log_path="{lp}/trainer-{h}".format(lp=log_path, h=hash_state),
+                log_path="{lp}/trainer-{h}".format(lp=log_path, h=composed_id),
                 mu=0.5,
                 rho=0.5,
                 variable_scope="cnn-{h}".format(h=hash_state)
@@ -499,12 +510,13 @@ class NASEnvHelper:
             reward = accuracy*100 - nas_trainer.weighted_log_density - \
                 nas_trainer.weighted_log_flops
 
-            return reward, True
+            return reward, accuracy, nas_trainer.density, nas_trainer.flops, \
+                True
         except Exception as ex:  # pylint: disable=broad-except
             print(
                 "Reward computation for network {h} failed with exception of \
 type {t}. Message is: {m}".format(h=hash_state, t=type(ex), m=str(ex)))
-            return 0., False
+            return 0., 0., 0., 0., False
 
     @staticmethod
     def is_terminal(action, action_info):
