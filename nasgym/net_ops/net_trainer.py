@@ -230,7 +230,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
         """Train the self-network with the the given training configuration."""
         if isinstance(train_input_fn, str):
             if os.environ.get('TF_ENABLE_MIRRORED_STRATEGY') is not None:
-                train_input_fn = self.custom_input_fn(
+                train_input_fn = lambda: self.custom_input_fn(
                     train_data,
                     train_labels,
                     int(self.batch_size/self.distributed_nreplicas)
@@ -287,7 +287,7 @@ value has been provided. Options are: 'default'"
         # If it is of type str, make sure is a valid
         if isinstance(eval_input_fn, str):
             if os.environ.get('TF_ENABLE_MIRRORED_STRATEGY') is not None:
-                eval_input_fn = self.custom_input_fn(
+                eval_input_fn = lambda: self.custom_input_fn(
                     eval_data,
                     eval_labels,
                     int(self.batch_size/self.distributed_nreplicas)
