@@ -4,6 +4,7 @@ import os
 import math
 from abc import ABC, abstractmethod
 import tensorflow as tf
+from tensorflow.python.client import device_lib
 from nasgym.net_ops.net_builder import sequence_to_net
 from nasgym.net_ops.net_utils import compute_network_density
 from nasgym.net_ops.net_utils import compute_network_flops
@@ -66,8 +67,9 @@ class DefaultNASTrainer(NasEnvTrainerBase):
             # TODO: Improve handling of environment variables
             if os.environ.get('TF_ENABLE_MIRRORED_STRATEGY') is not None:
                 mirrored_strategy = tf.contrib.distribute.MirroredStrategy()
+                local_device_protos = device_lib.list_local_devices()
                 self.distributed_nreplicas = \
-                    mirrored_strategy.num_replicas_in_sync
+                    len([x.name for x in local_device_protos if x.device_type == 'GPU'])
             else:
                 mirrored_strategy = None
                 self.distributed_nreplicas = 1
