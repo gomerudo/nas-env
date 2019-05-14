@@ -233,7 +233,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                 train_input_fn = self.custom_input_fn(
                     train_data,
                     train_labels,
-                    self.batch_size/self.distributed_nreplicas
+                    int(self.batch_size/self.distributed_nreplicas)
                 )
             else:
                 if train_input_fn in ["default"]:
@@ -290,7 +290,7 @@ value has been provided. Options are: 'default'"
                 eval_input_fn = self.custom_input_fn(
                     eval_data,
                     eval_labels,
-                    self.batch_size/self.distributed_nreplicas
+                    int(self.batch_size/self.distributed_nreplicas)
                 )
             else:
                 if eval_input_fn == "default":
