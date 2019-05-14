@@ -65,7 +65,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
             # Set distributed strategy
             # TODO: Improve handling of environment variables
             if os.environ.get('TF_ENABLE_MIRRORED_STRATEGY') is not None:
-                mirrored_strategy = tf.distribute.MirroredStrategy()
+                mirrored_strategy = tf.contrib.distribute.MirroredStrategy()
                 self.distributed_nreplicas = \
                     mirrored_strategy.num_replicas_in_sync
             else:
