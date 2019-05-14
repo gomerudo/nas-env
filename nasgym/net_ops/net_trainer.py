@@ -228,25 +228,31 @@ class DefaultNASTrainer(NasEnvTrainerBase):
     def train(self, train_data, train_labels, train_input_fn="default",
               n_epochs=12):
         """Train the self-network with the the given training configuration."""
-        # Validations:
-        # If it is of type str, make sure is a valid
         if isinstance(train_input_fn, str):
-            # We use a list in case we want to extend in the future.
-            if train_input_fn in ["default"]:
-                if train_input_fn == "default":
-                    # pylint: disable=no-member
-                    train_input_fn = tf.estimator.inputs.numpy_input_fn(
-                        x={"x": train_data},
-                        y=train_labels,
-                        batch_size=int(self.batch_size/self.distributed_nreplicas),
-                        num_epochs=None,
-                        shuffle=True
-                    )
-            else:
-                raise ValueError(
-                    "train_input_fn has been specified as string, but no valid\
-value has been provided. Options are: 'default'"
+            if os.environ.get('TF_ENABLE_MIRRORED_STRATEGY') is not None:
+                train_input_fn = self.custom_input_fn(
+                    train_data,
+                    train_labels,
+                    self.batch_size/self.distributed_nreplicas
                 )
+            else:
+                if train_input_fn in ["default"]:
+                    if train_input_fn == "default":
+                        # pylint: disable=no-member
+                        train_input_fn = tf.estimator.inputs.numpy_input_fn(
+                            x={"x": train_data},
+                            y=train_labels,
+                            batch_size=int(
+                                self.batch_size/self.distributed_nreplicas
+                            ),
+                            num_epochs=None,
+                            shuffle=True
+                        )
+                else:
+                    raise ValueError(
+                        "train_input_fn has been specified as string, but no valid\
+value has been provided. Options are: 'default'"
+                    )
 
         # Prepare for logging of the probabilities, i.e. the softmax layer
         # tensors_to_log = {
@@ -268,20 +274,34 @@ value has been provided. Options are: 'default'"
 
         return train_res
 
+    def custom_input_fn(self, data, labels, batch_size):
+        # def input_fn():
+        dataset = tf.data.Dataset.from_tensors(
+            ({"x": data}, labels)
+        )
+        return dataset.batch(batch_size)
+
     def evaluate(self, eval_data, eval_labels, eval_input_fn="default"):
         """Evaluate a given dataset, with the internal network."""
         # Validations:
         # If it is of type str, make sure is a valid
         if isinstance(eval_input_fn, str):
-            # We use a list in case we want to extend in the future.
-            if eval_input_fn in ["default"]:
+            if os.environ.get('TF_ENABLE_MIRRORED_STRATEGY') is not None:
+                eval_input_fn = self.custom_input_fn(
+                    eval_data,
+                    eval_labels,
+                    self.batch_size/self.distributed_nreplicas
+                )
+            else:
                 if eval_input_fn == "default":
                     # pylint: disable=no-member
                     eval_input_fn = tf.estimator.inputs.numpy_input_fn(
                         x={"x": eval_data},
                         y=eval_labels,
                         num_epochs=1,
-                        batch_size=int(self.batch_size/self.distributed_nreplicas),
+                        batch_size=int(
+                            self.batch_size/self.distributed_nreplicas
+                        ),
                         shuffle=False
                     )
 
