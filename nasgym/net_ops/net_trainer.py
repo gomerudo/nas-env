@@ -102,6 +102,8 @@ class DefaultNASTrainer(NasEnvTrainerBase):
         # Define the model_fn we want to return
         def model_fn(features, labels, mode):
             with tf.variable_scope(self.variable_scope):
+                print("Shape of features is:", features.get_shape().dims)
+                print("Expected shape of features is:", self.input_shape)
                 # 1. Define the input placeholder
                 if len(self.input_shape) == 2:
                     net_input = tf.reshape(
@@ -233,6 +235,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                 train_input_fn = lambda: self.custom_input_fn(
                     train_data,
                     train_labels,
+                    1,
                     int(self.batch_size/self.distributed_nreplicas)
                 )
             else:
@@ -274,12 +277,11 @@ value has been provided. Options are: 'default'"
 
         return train_res
 
-    def custom_input_fn(self, data, labels, batch_size):
-        # def input_fn():
-        dataset = tf.data.Dataset.from_tensors(
+    def custom_input_fn(self, data, labels, epochs, batch_size):
+        dataset = tf.data.Dataset.from_tensor_slices(
             ({"x": data}, labels)
         )
-        return dataset.batch(batch_size)
+        return dataset.shuffle(5000).repeat(epochs).batch(batch_size)
 
     def evaluate(self, eval_data, eval_labels, eval_input_fn="default"):
         """Evaluate a given dataset, with the internal network."""
@@ -290,6 +292,7 @@ value has been provided. Options are: 'default'"
                 eval_input_fn = lambda: self.custom_input_fn(
                     eval_data,
                     eval_labels,
+                    1,
                     int(self.batch_size/self.distributed_nreplicas)
                 )
             else:
