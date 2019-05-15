@@ -102,8 +102,6 @@ class DefaultNASTrainer(NasEnvTrainerBase):
         # Define the model_fn we want to return
         def model_fn(features, labels, mode):
             with tf.variable_scope(self.variable_scope):
-                print("Shape of features is:", features.get_shape().dims)
-                print("Expected shape of features is:", self.input_shape)
                 # 1. Define the input placeholder
                 if len(self.input_shape) == 2:
                     net_input = tf.reshape(
@@ -281,7 +279,11 @@ value has been provided. Options are: 'default'"
         dataset = tf.data.Dataset.from_tensor_slices(
             ({"x": data}, labels)
         )
-        return dataset.shuffle(5000).repeat(epochs).batch(batch_size)
+        
+        dataset = dataset.shuffle(buffer_size=batch_size * 10)
+        dataset = dataset.repeat()
+        dataset = dataset.batch(batch_size)
+        return dataset
 
     def evaluate(self, eval_data, eval_labels, eval_input_fn="default"):
         """Evaluate a given dataset, with the internal network."""
@@ -344,7 +346,6 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
         def model_fn(features, labels, mode):
             with tf.variable_scope(self.variable_scope):
                 print("Shape of features is:", features["x"].get_shape().dims)
-                print("Expected shape of features is:", self.input_shape)
                 # 1. Define the input placeholder
                 if len(self.input_shape) == 2:  # Reshape if necessary
                     new_shape = [-1] + list(self.input_shape) + [1]
