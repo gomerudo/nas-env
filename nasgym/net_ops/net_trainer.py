@@ -275,14 +275,34 @@ value has been provided. Options are: 'default'"
 
         return train_res
 
-    def custom_input_fn(self, data, labels, epochs, batch_size):
+    def custom_input_fn(self, features, labels, epochs, batch_size):
+        print("In input function. Type of features is:", type(features))
+        print("In input function. Type of labels is:", type(labels))
+        print("In input function. Epochs is:", type(labels))
+        print("In input funciton. The batch size is:", batch_size)
+
         dataset = tf.data.Dataset.from_tensor_slices(
-            ({"x": data}, labels)
+            ({"x": features}, labels)
         )
-        
-        dataset = dataset.shuffle(buffer_size=batch_size * 10)
-        dataset = dataset.repeat()
+
+        dataset = dataset.shuffle(buffer_size=batch_size*10)
+        dataset = dataset.repeat(epochs)
         dataset = dataset.batch(batch_size)
+
+        dataset_aux = tf.data.Dataset.from_tensors(
+            ({"x": features}, labels)
+        )
+        dataset_aux = dataset_aux.shuffle(buffer_size=batch_size*10)
+        dataset_aux = dataset_aux.repeat(epochs)
+        dataset_aux = dataset_aux.batch(batch_size)
+
+
+        print("In input function. Output shapes are (1):", dataset.output_shapes)
+        print("In input function. Output types are (1):", dataset.output_types)
+
+        print("In input function. Output shapes are (2):", dataset_aux.output_shapes)
+        print("In input function. Output types are (2):", dataset_aux.output_types)
+
         return dataset
 
     def evaluate(self, eval_data, eval_labels, eval_input_fn="default"):
