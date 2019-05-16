@@ -225,16 +225,48 @@ class DefaultNASTrainer(NasEnvTrainerBase):
         # Return the model_fn function
         return model_fn
 
+    def custom_input_fn(self, features, labels, epochs, batch_size):
+        print("In input function. Shape of features is:", features.shape)
+        print("In input function. Type of labels is:", labels.shape)
+        print("In input function. Epochs is:", epochs)
+        print("In input funciton. The batch size is:", batch_size)
+
+        dataset = tf.data.Dataset.from_tensor_slices(
+            ({"x": features}, labels)
+        )
+
+        dataset.apply(
+            tf.contrib.data.shuffle_and_repeat(batch_size*10, epochs)
+        )
+        # dataset = dataset.shuffle(buffer_size=batch_size*10)
+        # dataset = dataset.repeat(epochs)
+        dataset = dataset.batch(batch_size)
+
+        # dataset_aux = tf.data.Dataset.from_tensors(
+        #     ({"x": features}, labels)
+        # )
+        # dataset_aux = dataset_aux.shuffle(buffer_size=batch_size*10)
+        # dataset_aux = dataset_aux.repeat(epochs)
+        # dataset_aux = dataset_aux.batch(batch_size)
+
+        print("In input function. Output shapes are (1):", dataset.output_shapes)
+        print("In input function. Output types are (1):", dataset.output_types)
+
+        # print("In input function. Output shapes are (2):", dataset_aux.output_shapes)
+        # print("In input function. Output types are (2):", dataset_aux.output_types)
+
+        return dataset
+
     def train(self, train_data, train_labels, train_input_fn="default",
               n_epochs=12):
         """Train the self-network with the the given training configuration."""
         if isinstance(train_input_fn, str):
             if os.environ.get('TF_ENABLE_MIRRORED_STRATEGY') is not None:
                 train_input_fn = lambda: self.custom_input_fn(
-                    train_data,
-                    train_labels,
-                    1,
-                    int(self.batch_size/self.distributed_nreplicas)
+                    features=train_data,
+                    labels=train_labels,
+                    epochs=None,
+                    batch_size=self.batch_size
                 )
             else:
                 if train_input_fn in ["default"]:
@@ -243,9 +275,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                         train_input_fn = tf.estimator.inputs.numpy_input_fn(
                             x={"x": train_data},
                             y=train_labels,
-                            batch_size=int(
-                                self.batch_size/self.distributed_nreplicas
-                            ),
+                            batch_size=self.batch_size,
                             num_epochs=None,
                             shuffle=True
                         )
@@ -255,55 +285,12 @@ class DefaultNASTrainer(NasEnvTrainerBase):
 value has been provided. Options are: 'default'"
                     )
 
-        # Prepare for logging of the probabilities, i.e. the softmax layer
-        # tensors_to_log = {
-        #     "optimizer": "{scope}/L_TRAIN/OPT_MIN".format(
-        #         scope=self.variable_scope
-        #     ),
-        # }
-
-        # logging_hook = tf.train.LoggingTensorHook(
-        #     tensors=tensors_to_log,
-        #     every_n_iter=1
-        # )
-
         train_res = self.classifier.train(
             input_fn=train_input_fn,
             steps=n_epochs,
-            # hooks=[logging_hook]
         )
 
         return train_res
-
-    def custom_input_fn(self, features, labels, epochs, batch_size):
-        print("In input function. Type of features is:", type(features))
-        print("In input function. Type of labels is:", type(labels))
-        print("In input function. Epochs is:", type(labels))
-        print("In input funciton. The batch size is:", batch_size)
-
-        dataset = tf.data.Dataset.from_tensor_slices(
-            ({"x": features}, labels)
-        )
-
-        dataset = dataset.shuffle(buffer_size=batch_size*10)
-        dataset = dataset.repeat(epochs)
-        dataset = dataset.batch(batch_size)
-
-        dataset_aux = tf.data.Dataset.from_tensors(
-            ({"x": features}, labels)
-        )
-        dataset_aux = dataset_aux.shuffle(buffer_size=batch_size*10)
-        dataset_aux = dataset_aux.repeat(epochs)
-        dataset_aux = dataset_aux.batch(batch_size)
-
-
-        print("In input function. Output shapes are (1):", dataset.output_shapes)
-        print("In input function. Output types are (1):", dataset.output_types)
-
-        print("In input function. Output shapes are (2):", dataset_aux.output_shapes)
-        print("In input function. Output types are (2):", dataset_aux.output_types)
-
-        return dataset
 
     def evaluate(self, eval_data, eval_labels, eval_input_fn="default"):
         """Evaluate a given dataset, with the internal network."""
@@ -315,7 +302,7 @@ value has been provided. Options are: 'default'"
                     eval_data,
                     eval_labels,
                     1,
-                    int(self.batch_size/self.distributed_nreplicas)
+                    self.batch_size
                 )
             else:
                 if eval_input_fn == "default":
@@ -324,9 +311,7 @@ value has been provided. Options are: 'default'"
                         x={"x": eval_data},
                         y=eval_labels,
                         num_epochs=1,
-                        batch_size=int(
-                            self.batch_size/self.distributed_nreplicas
-                        ),
+                        batch_size=self.batch_size,
                         shuffle=False
                     )
 

@@ -486,6 +486,8 @@ class NASEnvHelper:
             )
             train_labels = train_labels.astype(np.int32)
 
+            print("Training {n}".format(n=composed_id))
+
             nas_trainer.train(
                 train_data=train_features,
                 train_labels=train_labels,
@@ -499,11 +501,15 @@ class NASEnvHelper:
             )
             val_labels = val_labels.astype(np.int32)
 
+            print("Evaluating {n}".format(n=composed_id))
+
             res = nas_trainer.evaluate(
                 eval_data=val_features,
                 eval_labels=val_labels,
                 eval_input_fn="default"
             )
+
+            print("Train-eval finished for network {n}".format(n=composed_id))
 
             accuracy = res['accuracy']
             # Compute the refined reward as defined
