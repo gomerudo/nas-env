@@ -235,25 +235,13 @@ class DefaultNASTrainer(NasEnvTrainerBase):
             ({"x": features}, labels)
         )
 
-        dataset.apply(
+        dataset = dataset.apply(
             tf.contrib.data.shuffle_and_repeat(batch_size*10, epochs)
         )
-        # dataset = dataset.shuffle(buffer_size=batch_size*10)
-        # dataset = dataset.repeat(epochs)
         dataset = dataset.batch(batch_size)
-
-        # dataset_aux = tf.data.Dataset.from_tensors(
-        #     ({"x": features}, labels)
-        # )
-        # dataset_aux = dataset_aux.shuffle(buffer_size=batch_size*10)
-        # dataset_aux = dataset_aux.repeat(epochs)
-        # dataset_aux = dataset_aux.batch(batch_size)
 
         print("In input function. Output shapes are (1):", dataset.output_shapes)
         print("In input function. Output types are (1):", dataset.output_types)
-
-        # print("In input function. Output shapes are (2):", dataset_aux.output_shapes)
-        # print("In input function. Output types are (2):", dataset_aux.output_types)
 
         return dataset
 
