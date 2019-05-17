@@ -66,12 +66,12 @@ class DefaultNASTrainer(NasEnvTrainerBase):
             # Set distributed strategy
             # TODO: Improve handling of environment variables
             if os.environ.get('TF_ENABLE_MIRRORED_STRATEGY') is not None:
-                mirrored_strategy = tf.contrib.distribute.MirroredStrategy()
+                distributed_strategy = tf.contrib.distribute.ParameterServerStrategy()
                 local_device_protos = device_lib.list_local_devices()
                 self.distributed_nreplicas = \
                     len([x.name for x in local_device_protos if x.device_type == 'GPU'])
             else:
-                mirrored_strategy = None
+                distributed_strategy = None
                 self.distributed_nreplicas = 1
 
             if os.environ.get('TF_ENABLE_LOG_DEVICE_PLACEMENT') is not None:
@@ -84,8 +84,8 @@ class DefaultNASTrainer(NasEnvTrainerBase):
             # pylint: disable=no-member
             run_config = tf.estimator.RunConfig(
                 session_config=sess_config,
-                train_distribute=mirrored_strategy,
-                eval_distribute=mirrored_strategy
+                train_distribute=distributed_strategy,
+                eval_distribute=distributed_strategy
             )
             # pylint: disable=no-member
             self.classifier = tf.estimator.Estimator(
@@ -226,23 +226,20 @@ class DefaultNASTrainer(NasEnvTrainerBase):
         return model_fn
 
     def custom_input_fn(self, features, labels, epochs, batch_size):
-        print("In input function. Shape of features is:", features.shape)
-        print("In input function. Type of labels is:", labels.shape)
-        print("In input function. Epochs is:", epochs)
-        print("In input funciton. The batch size is:", batch_size)
-
+        # print("In input function. Shape of features is:", features.shape)
+        # print("In input function. Type of labels is:", labels.shape)
+        # print("In input function. Epochs is:", epochs)
+        # print("In input funciton. The batch size is:", batch_size)
         dataset = tf.data.Dataset.from_tensor_slices(
             ({"x": features}, labels)
         )
-
         dataset = dataset.apply(
             tf.contrib.data.shuffle_and_repeat(batch_size*10, epochs)
         )
         dataset = dataset.batch(batch_size)
 
-        print("In input function. Output shapes are (1):", dataset.output_shapes)
-        print("In input function. Output types are (1):", dataset.output_types)
-
+        # print("In input function. Output shapes are (1):", dataset.output_shapes)
+        # print("In input function. Output types are (1):", dataset.output_types)
         return dataset
 
     def train(self, train_data, train_labels, train_input_fn="default",
@@ -338,7 +335,7 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
         # Define the model_fn we want to return
         def model_fn(features, labels, mode):
             with tf.variable_scope(self.variable_scope):
-                print("Shape of features is:", features["x"].get_shape().dims)
+                # print("Shape of features is:", features["x"].get_shape().dims)
                 # 1. Define the input placeholder
                 if len(self.input_shape) == 2:  # Reshape if necessary
                     new_shape = [-1] + list(self.input_shape) + [1]
