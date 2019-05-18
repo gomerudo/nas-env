@@ -66,10 +66,13 @@ class DefaultNASTrainer(NasEnvTrainerBase):
             # Set distributed strategy
             # TODO: Improve handling of environment variables
             if os.environ.get('TF_ENABLE_MIRRORED_STRATEGY') is not None:
-                distributed_strategy = tf.contrib.distribute.ParameterServerStrategy()
                 local_device_protos = device_lib.list_local_devices()
                 self.distributed_nreplicas = \
                     len([x.name for x in local_device_protos if x.device_type == 'GPU'])
+                distributed_strategy = \
+                    tf.contrib.distribute.MirroredStrategy(
+                        num_gpus=self.distributed_nreplicas
+                    )
             else:
                 distributed_strategy = None
                 self.distributed_nreplicas = 1
