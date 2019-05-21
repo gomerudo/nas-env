@@ -7,6 +7,20 @@ from nasgym.dataset_handlers.default_handler import DefaultDatasetHandler
 
 nas_logger = logging.getLogger('nasgym.logger')
 
+# create console handler and set level to debug
+ch = logging.StreamHandler()
+
+# create formatter
+formatter = logging.Formatter(
+    "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+)
+
+# add formatter to ch
+ch.setFormatter(formatter)
+
+# add ch to logger
+nas_logger.addHandler(ch)
+
 # (train_data, train_labels), (eval_data, eval_labels) = \
 #     tf.keras.datasets.mnist.load_data()
 
