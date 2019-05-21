@@ -6,9 +6,11 @@ from gym.envs.registration import register
 from nasgym.dataset_handlers.default_handler import DefaultDatasetHandler
 
 nas_logger = logging.getLogger('nasgym.logger')
+nas_logger.setLevel(logging.DEBUG)
 
 # create console handler and set level to debug
 ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
 
 # create formatter
 formatter = logging.Formatter(
