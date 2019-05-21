@@ -1,9 +1,11 @@
 """Register the different NAS environments we makea available by default."""
 
+import logging
 import tensorflow as tf
 from gym.envs.registration import register
 from nasgym.dataset_handlers.default_handler import DefaultDatasetHandler
 
+nas_logger = logging.getLogger('nasgym.logger')
 
 # (train_data, train_labels), (eval_data, eval_labels) = \
 #     tf.keras.datasets.mnist.load_data()

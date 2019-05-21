@@ -15,6 +15,7 @@ import numpy as np
 import yaml
 import gym
 from gym import spaces
+from nasgym import nas_logger
 from nasgym.database.default_db import DefaultExperimentsDatabase
 from nasgym.dataset_handlers.default_handler import AbstractDatasetHandler
 from nasgym.net_ops.net_builder import LTYPE_ADD
@@ -45,6 +46,7 @@ class DefaultNASEnv(gym.Env):
                  max_layers=10, dataset_handler=None,
                  db_file="workspace/db_experiments.csv", log_path="workspace"):
         """Initialize the NAS environment, via a configuration file."""
+        nas_logger.debug("Creating instance of the Default NAS environment")
         # 1. Assign the class' properties
         self.max_steps = max_steps
         self.max_layers = max_layers  # TODO: not used now, remove?
@@ -118,6 +120,9 @@ AbstractDatasetHandler"
                 "Invalid configuration file. Please use a valid format."
             )
 
+        nas_logger.debug(
+            "Loading Default NAS configuration from file %s", config_file
+        )
         # 2. Load parameters from file
         file_parser = DefaultNASEnvParser(config_file)
 
@@ -150,6 +155,11 @@ AbstractDatasetHandler"
         # 4. Compute the reward: if it exists already in the DB, skip training,
         #    otherwise proceed to training.
         if self.db_manager.exists(composed_id):
+            nas_logger.info(
+                "Skipping reward computation for architecture %s cause it \
+already exists the DB of experiments", composed_id
+            )
+
             prev = self.db_manager.get_row(composed_id)
             reward = float(prev['reward'])
             accuracy = float(prev['accuracy'])
@@ -157,12 +167,11 @@ AbstractDatasetHandler"
             flops = float(prev['flops'])
             running_time = int(prev['running_time'])
             status = int(prev['is_valid'])
-
-            print(
-                "Skipping computationf of reward for {id} cause it has been \
-found in the DB".format(id=composed_id)
-            )
         else:
+            nas_logger.info(
+                "Reward for architecture %s has not been found in the DB",
+                composed_id
+            )
             start = time.time()
             reward, accuracy, density, flops, status = NASEnvHelper.reward(
                 self.state,
@@ -232,6 +241,8 @@ found in the DB".format(id=composed_id)
     def reset(self):
         """Reset the environment's state."""
         # Reset the state to only zeros
+        nas_logger.debug("Resetting environment")
+
         self.state = np.zeros(
             shape=self.observation_space.shape,
             dtype=np.int32
@@ -248,6 +259,7 @@ found in the DB".format(id=composed_id)
     # This is not from gym.Env interface. This is used by our Meta-RL algorithm
     def next_task(self):
         """Change the NN task by switching the dataset to be used."""
+        nas_logger.debug("Switching to next task in the dataset handler")
         # We always rely on the dataset handler, since the switching is
         # independent from the environment
         self.dataset_handler.next_dataset()
@@ -270,6 +282,7 @@ class DefaultNASEnvParser:
 
     def reload_file(self):
         """Load the config file from scratch."""
+        nas_logger.debug("Re-loading configuration file %s", self.config_file)
         with open(self.config_file, 'r') as yaml_file:
             content = yaml.load(yaml_file)
             # Validate the content
@@ -285,6 +298,7 @@ class DefaultNASEnvParser:
         self.observation_space = self._populate_observation_space()
 
     def _populate_action_space(self):
+        nas_logger.debug("Obtaining the action space for the environment")
         action_info = {}
         counter = 0
 
@@ -393,6 +407,9 @@ class NASEnvHelper:
         # Obtain the encoding
         encoding = NASEnvHelper.infer_action_encoding(action, action_info)
 
+        nas_logger.debug(
+            "Performing action %d, inferred as %s", action, encoding
+        )
         # Perform the modification in the space, given the type of action
         if isinstance(encoding, int):  # It is a remove action
             target[encoding] = np.zeros(5)
@@ -468,16 +485,31 @@ class NASEnvHelper:
             composed_id = "{d}-{h}".format(
                 d=dataset_handler.current_dataset_name(), h=hash_state
             )
-
+            nas_logger.debug(
+                "Reward of architecture %s will be computed", composed_id
+            )
             nas_trainer = EarlyStopNASTrainer(
                 encoded_network=state.copy(),
                 input_shape=infer_data_shape(train_features),
                 n_classes=infer_n_classes(train_labels),
-                batch_size=256,
+                batch_size=128,
                 log_path="{lp}/trainer-{h}".format(lp=log_path, h=composed_id),
                 mu=0.5,
                 rho=0.5,
                 variable_scope="cnn-{h}".format(h=hash_state)
+            )
+            nas_logger.debug(
+                "Trainer used for reward computation is %s. Object's \
+attributes are:", type(nas_trainer)
+            )
+
+            nas_logger.debug("  input_shape: %s", nas_trainer.input_shape)
+            nas_logger.debug("  batch_size: %s", nas_trainer.batch_size)
+            nas_logger.debug("  log_path: %s", nas_trainer.log_path)
+            nas_logger.debug("  mu: %s", nas_trainer.mu)
+            nas_logger.debug("  rho: %s", nas_trainer.rho)
+            nas_logger.debug(
+                "  variable_scope: %s", nas_trainer.variable_scope
             )
 
             train_features = normalize_dataset(
@@ -486,8 +518,7 @@ class NASEnvHelper:
             )
             train_labels = train_labels.astype(np.int32)
 
-            print("Training {n}".format(n=composed_id))
-
+            nas_logger.debug("Training architecture %s", composed_id)
             nas_trainer.train(
                 train_data=train_features,
                 train_labels=train_labels,
@@ -501,15 +532,16 @@ class NASEnvHelper:
             )
             val_labels = val_labels.astype(np.int32)
 
-            print("Evaluating {n}".format(n=composed_id))
-
+            nas_logger.debug("Evaluating architecture %s", composed_id)
             res = nas_trainer.evaluate(
                 eval_data=val_features,
                 eval_labels=val_labels,
                 eval_input_fn="default"
             )
-
-            print("Train-eval finished for network {n}".format(n=composed_id))
+            nas_logger.debug(
+                "Train-evaluation procedure finished for architecture %s",
+                composed_id
+            )
 
             accuracy = res['accuracy']
             # Compute the refined reward as defined
@@ -519,9 +551,10 @@ class NASEnvHelper:
             return reward, accuracy, nas_trainer.density, nas_trainer.flops, \
                 True
         except Exception as ex:  # pylint: disable=broad-except
-            print(
-                "Reward computation for network {h} failed with exception of \
-type {t}. Message is: {m}".format(h=hash_state, t=type(ex), m=str(ex)))
+            nas_logger.info(
+                "Reward computation of architecture %s failed with exception \
+of type %s. Message is: %s", composed_id, type(ex), str(ex)
+            )
             return 0., 0., 0., 0., False
 
     @staticmethod

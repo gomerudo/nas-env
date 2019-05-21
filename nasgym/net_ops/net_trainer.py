@@ -5,6 +5,7 @@ import math
 from abc import ABC, abstractmethod
 import tensorflow as tf
 from tensorflow.python.client import device_lib
+from nasgym import nas_logger
 from nasgym.net_ops.net_builder import sequence_to_net
 from nasgym.net_ops.net_utils import compute_network_density
 from nasgym.net_ops.net_utils import compute_network_flops
@@ -53,19 +54,26 @@ class DefaultNASTrainer(NasEnvTrainerBase):
         super(DefaultNASTrainer, self).__init__(
             encoded_network=encoded_network,
             input_shape=input_shape,
-            n_classes=n_classes,
+            n_classes=n_classes,  # TODO: We don't use it.
             batch_size=batch_size,
             log_path=log_path,
             variable_scope=variable_scope
         )
         self._set_estimator()
-        print("NUM_REPLICAS_SET_TO", self.distributed_nreplicas)
 
     def _set_estimator(self):
+        nas_logger.debug(
+            "Configuring the estimator that will be used for training and \
+evaluation"
+        )
         if self.classifier is None:
             # Set distributed strategy
             # TODO: Improve handling of environment variables
-            if os.environ.get('TF_ENABLE_MIRRORED_STRATEGY') is not None:
+            if os.environ.get('TF_ENABLE_DISTRIBUTED_STRATEGY') is not None:
+                nas_logger.info(
+                    "Distributed strategy has been indicated. Obtaining the \
+number of replicas available."
+                )
                 local_device_protos = device_lib.list_local_devices()
                 self.distributed_nreplicas = \
                     len([x.name for x in local_device_protos if x.device_type == 'GPU'])
@@ -73,11 +81,19 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                     tf.contrib.distribute.MirroredStrategy(
                         num_gpus=self.distributed_nreplicas
                     )
+                nas_logger.info(
+                    "Number of replicas to be used is %d",
+                    self.distributed_nreplicas
+                )
             else:
                 distributed_strategy = None
                 self.distributed_nreplicas = 1
 
             if os.environ.get('TF_ENABLE_LOG_DEVICE_PLACEMENT') is not None:
+                nas_logger.debug(
+                    "Distributed strategy has been indicated. Obtaining the \
+number of replicas available."
+                )
                 sess_config = tf.ConfigProto(log_device_placement=True)
             else:
                 sess_config = tf.ConfigProto()
@@ -107,6 +123,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
             with tf.variable_scope(self.variable_scope):
                 # 1. Define the input placeholder
                 if len(self.input_shape) == 2:
+                    nas_logger.debug("Reshaping input during model building.")
                     net_input = tf.reshape(
                         tensor=features["x"],
                         shape=[-1] + list(self.input_shape) + [1],
@@ -249,7 +266,9 @@ class DefaultNASTrainer(NasEnvTrainerBase):
               n_epochs=12):
         """Train the self-network with the the given training configuration."""
         if isinstance(train_input_fn, str):
-            if os.environ.get('TF_ENABLE_MIRRORED_STRATEGY') is not None:
+            if os.environ.get('TF_ENABLE_DISTRIBUTED_STRATEGY') is not None:
+                nas_logger.debug("Distributed strategy has been indicated. \
+Using custom input function for training.")
                 train_input_fn = lambda: self.custom_input_fn(
                     features=train_data,
                     labels=train_labels,
@@ -273,10 +292,12 @@ class DefaultNASTrainer(NasEnvTrainerBase):
 value has been provided. Options are: 'default'"
                     )
 
+        nas_logger.debug("Running tensorflow training for %d epochs", n_epochs)
         train_res = self.classifier.train(
             input_fn=train_input_fn,
             steps=n_epochs,
         )
+        nas_logger.debug("TensorFlow training finished")
 
         return train_res
 
@@ -285,7 +306,9 @@ value has been provided. Options are: 'default'"
         # Validations:
         # If it is of type str, make sure is a valid
         if isinstance(eval_input_fn, str):
-            if os.environ.get('TF_ENABLE_MIRRORED_STRATEGY') is not None:
+            if os.environ.get('TF_ENABLE_DISTRIBUTED_STRATEGY') is not None:
+                nas_logger.debug("Distributed strategy has been indicated. \
+Using custom input function for evaluation.")
                 eval_input_fn = lambda: self.custom_input_fn(
                     eval_data,
                     eval_labels,
@@ -302,8 +325,9 @@ value has been provided. Options are: 'default'"
                         batch_size=self.batch_size,
                         shuffle=False
                     )
-
+        nas_logger.debug("Running tensorflow evaluation")
         eval_res = self.classifier.evaluate(input_fn=eval_input_fn)
+        nas_logger.debug("TensorFlow evaluation finished")
         return eval_res
 
 
