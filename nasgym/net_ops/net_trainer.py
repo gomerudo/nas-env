@@ -16,7 +16,7 @@ class NasEnvTrainerBase(ABC):
 
     def __init__(self, encoded_network, input_shape, n_classes,
                  batch_size=256, log_path="./trainer",
-                 variable_scope="custom"):
+                 variable_scope="custom", profile_path="./profiler"):
         """General purpose constructor."""
         # Encapsulation
         self.encoded_network = encoded_network
@@ -49,7 +49,8 @@ class DefaultNASTrainer(NasEnvTrainerBase):
     """Implement Training with Eearly Stop Strategy."""
 
     def __init__(self, encoded_network, input_shape, n_classes, batch_size=256,
-                 log_path="./trainer", variable_scope="custom"):
+                 log_path="./trainer", variable_scope="custom",
+                 profile_path="./profiler"):
         """Specific constructor with option for FLOPS and Density."""
         super(DefaultNASTrainer, self).__init__(
             encoded_network=encoded_network,
@@ -57,7 +58,8 @@ class DefaultNASTrainer(NasEnvTrainerBase):
             n_classes=n_classes,  # TODO: We don't use it.
             batch_size=batch_size,
             log_path=log_path,
-            variable_scope=variable_scope
+            variable_scope=variable_scope,
+            profile_path=profile_path
         )
         self._set_estimator()
 
@@ -292,10 +294,19 @@ Using custom input function for training.")
 value has been provided. Options are: 'default'"
                     )
 
+        hooks = [
+            tf.train.ProfilerHook(
+                output_dir=self.log_path,
+                save_steps=1,
+                show_memory=True
+            )
+        ]
+
         nas_logger.debug("Running tensorflow training for %d epochs", n_epochs)
         train_res = self.classifier.train(
             input_fn=train_input_fn,
             steps=n_epochs,
+            hooks=hooks
         )
         nas_logger.debug("TensorFlow training finished")
 
@@ -335,7 +346,8 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
     """Implement Training with Eearly Stop Strategy."""
 
     def __init__(self, encoded_network, input_shape, n_classes, batch_size=256,
-                 log_path="./trainer", mu=0.5, rho=0.5, variable_scope="cnn"):
+                 log_path="./trainer", mu=0.5, rho=0.5, variable_scope="cnn",
+                 profile_path="./profiler"):
         """Specific constructor with option for FLOPS and Density."""
         super(EarlyStopNASTrainer, self).__init__(
             encoded_network=encoded_network,
@@ -343,7 +355,8 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
             n_classes=n_classes,
             batch_size=batch_size,
             log_path=log_path,
-            variable_scope=variable_scope
+            variable_scope=variable_scope,
+            profile_path=profile_path
         )
         # Custom variables for the refined accuracy in BlockQNN implementation
         # pylint: disable=invalid-name
