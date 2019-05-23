@@ -15,7 +15,9 @@ import numpy as np
 import yaml
 import gym
 from gym import spaces
+import nasgym.utl.configreader as cr
 from nasgym import nas_logger
+from nasgym import CONFIG_INI
 from nasgym.database.default_db import DefaultExperimentsDatabase
 from nasgym.dataset_handlers.default_handler import AbstractDatasetHandler
 from nasgym.net_ops.net_builder import LTYPE_ADD
@@ -52,6 +54,28 @@ class DefaultNASEnv(gym.Env):
         self.max_layers = max_layers  # TODO: not used now, remove?
         self.log_path = log_path
 
+        # Try to set each of the properties from config.ini
+        try:
+            self.max_steps = \
+                CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_MAXSTEPS]
+        except KeyError:
+            pass
+
+        try:
+            self.log_path = CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_LOGPATH]
+        except KeyError:
+            pass
+
+        try:
+            db_file = CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_DBFILE]
+        except KeyError:
+            pass
+
+        try:
+            config_file = CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_CONFIGFILE]
+        except KeyError:
+            pass
+
         # 2. Instanciate the database of experiments and its columns. Note that
         #    we never overwrite the file but append.
         self.db_manager = DefaultExperimentsDatabase(
@@ -78,7 +102,7 @@ class DefaultNASEnv(gym.Env):
         # Store the actions_info as a csv
         actions_info_df = DefaultExperimentsDatabase(
             file_name="{root}/{name}".format(
-                root=log_path,
+                root=self.log_path,
                 name="actions_info.csv"
             ),
             headers=[
@@ -485,6 +509,37 @@ class NASEnvHelper:
             composed_id = "{d}-{h}".format(
                 d=dataset_handler.current_dataset_name(), h=hash_state
             )
+
+            try:
+                final_batch_size = \
+                    CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_BATCHSIZE]
+                nas_logger.debug(
+                    "Using batch size from config.ini. Set to %d",
+                    final_batch_size
+                )
+            except KeyError:
+                final_batch_size = 256
+
+            try:
+                final_rho = \
+                    CONFIG_INI[cr.SEC_TRAINER_EARLYSTOP][cr.PROP_RHOWEIGHT]
+                nas_logger.debug(
+                    "Using rho from config.ini. Set to %d",
+                    final_rho
+                )
+            except KeyError:
+                final_rho = 0.5
+
+            try:
+                final_mu = \
+                    CONFIG_INI[cr.SEC_TRAINER_EARLYSTOP][cr.PROP_MUWEIGHT]
+                nas_logger.debug(
+                    "Using mu from config.ini. Set to %d",
+                    final_mu
+                )
+            except KeyError:
+                final_mu = 0.5
+
             nas_logger.debug(
                 "Reward of architecture %s will be computed", composed_id
             )
@@ -492,10 +547,10 @@ class NASEnvHelper:
                 encoded_network=state.copy(),
                 input_shape=infer_data_shape(train_features),
                 n_classes=infer_n_classes(train_labels),
-                batch_size=128,
+                batch_size=final_batch_size,
                 log_path="{lp}/trainer-{h}".format(lp=log_path, h=composed_id),
-                mu=0.5,
-                rho=0.5,
+                mu=final_rho,
+                rho=final_mu,
                 variable_scope="cnn-{h}".format(h=hash_state)
             )
             nas_logger.debug(
@@ -518,12 +573,22 @@ attributes are:", type(nas_trainer)
             )
             train_labels = train_labels.astype(np.int32)
 
+            try:
+                final_n_epochs = \
+                    CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_NEPOCHS]
+                nas_logger.debug(
+                    "Using n_epochs from config.ini. Set to %d",
+                    final_n_epochs
+                )
+            except KeyError:
+                final_n_epochs = 12
+
             nas_logger.debug("Training architecture %s", composed_id)
             nas_trainer.train(
                 train_data=train_features,
                 train_labels=train_labels,
                 train_input_fn="default",
-                n_epochs=12  # As specified by BlockQNN
+                n_epochs=final_n_epochs  # As specified by BlockQNN
             )
 
             val_features = normalize_dataset(
