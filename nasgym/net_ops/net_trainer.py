@@ -45,6 +45,18 @@ class NasEnvTrainerBase(ABC):
         raise NotImplementedError("Method must be implemented by subclass")
 
 
+class OomReportingHook(tf.train.SessionRunHook):
+    """Report OOM during training when using Estimator."""
+
+    def before_run(self, run_context):
+        return tf.train.SessionRunArgs(
+            fetches=[],  # no extra fetches
+            options=tf.RunOptions(
+                report_tensor_allocations_upon_oom=True
+            )
+        )
+
+
 class DefaultNASTrainer(NasEnvTrainerBase):
     """Implement Training with Eearly Stop Strategy."""
 
@@ -299,7 +311,8 @@ value has been provided. Options are: 'default'"
                 output_dir=self.log_path,
                 save_steps=1,
                 show_memory=True
-            )
+            ),
+            OomReportingHook()
         ]
 
         nas_logger.debug("Running tensorflow training for %d epochs", n_epochs)
