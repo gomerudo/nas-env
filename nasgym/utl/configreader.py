@@ -64,7 +64,7 @@ def read_configfile():
         _set_property(SEC_DEFAULT, PROP_LOGPATH, config, res, None)
 
     if PROP_LOGGER_LEVEL in config[SEC_DEFAULT]:
-        _set_property(SEC_DEFAULT, PROP_LOGGER_LEVEL, config, res, None)
+        _set_property(SEC_DEFAULT, PROP_LOGGER_LEVEL, config, res, int)
 
     if PROP_LOGGER_NAME in config[SEC_DEFAULT]:
         _set_property(SEC_DEFAULT, PROP_LOGGER_NAME, config, res, None)
