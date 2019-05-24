@@ -38,7 +38,11 @@ def sequence_to_net(sequence, input_tensor):
         if layer_type == LTYPE_ADD:
             # i.e. if no predecesors at all
             if not layer_pred1 or not layer_pred2:
-                logging.warning("No predecessors for layer %d", layer_index)
+                raise ValueError(
+                    "Invalid predecessors. Two predecessors are needed to \
+build this network."
+                )
+                # logging.warning("No predecessors for layer %d", layer_index)
 
             with tf.name_scope("L{i}_ADD".format(i=layer_index)):
                 current_layer = safe_add(
@@ -57,7 +61,11 @@ def sequence_to_net(sequence, input_tensor):
         if layer_type == LTYPE_CONCAT:
             # i.e. if no predecesors at all
             if not layer_pred1 or not layer_pred2:
-                logging.warning("No predecessors for layer %d", layer_index)
+                # logging.warning("No predecessors for layer %d", layer_index)
+                raise ValueError(
+                    "Invalid predecessors. Two predecessors are needed to \
+build this network."
+                )
 
             with tf.name_scope("L{i}_CONCAT".format(i=layer_index)):
                 current_layer = safe_concat(
