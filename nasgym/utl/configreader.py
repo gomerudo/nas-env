@@ -1,7 +1,6 @@
 """Read the configuration file (.ini) with properties of the environment."""
 
 import configparser
-from nasgym import nas_logger
 
 SEC_DEFAULT = "DEFAULT"
 SEC_NASENV_DEFAULT = "nasenv.default"
@@ -209,13 +208,6 @@ def read_configfile():
 
 def _set_property(sec, prop, config, res, value_type=None):
     res[sec][prop] = _get_property(sec, prop, value_type, config)
-
-
-def _log_property_not_found(sec, prop):
-    nas_logger.info(
-        "Property %s/%s was not found in .ini file. Setting the default value",
-        sec, prop
-    )
 
 
 def _section_exists(section_name, config):
