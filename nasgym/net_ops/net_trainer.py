@@ -117,6 +117,8 @@ number of replicas available."
             # pylint: disable=no-member
             run_config = tf.estimator.RunConfig(
                 session_config=sess_config,
+                save_checkpoints_steps=None,
+                save_checkpoints_secs=None,
                 train_distribute=distributed_strategy,
                 eval_distribute=distributed_strategy
             )
@@ -306,20 +308,20 @@ Using custom input function for training.")
 value has been provided. Options are: 'default'"
                     )
 
-        hooks = [
-            tf.train.ProfilerHook(
-                output_dir=self.log_path,
-                save_steps=1,
-                show_memory=True
-            ),
-            OomReportingHook()
-        ]
+        # hooks = [
+        #     tf.train.ProfilerHook(
+        #         output_dir=self.log_path,
+        #         save_steps=1,
+        #         show_memory=True
+        #     ),
+        #     OomReportingHook()
+        # ]
 
         nas_logger.debug("Running tensorflow training for %d epochs", n_epochs)
         train_res = self.classifier.train(
             input_fn=train_input_fn,
             steps=n_epochs,
-            hooks=hooks
+            # hooks=hooks
         )
         nas_logger.debug("TensorFlow training finished")
 
