@@ -475,7 +475,7 @@ class NASEnvHelper:
             return action_arr[1]
 
         # Otherwise ...
-        layer_type = int(action_arr[0])
+        layer_type = action_arr[0]
         layer_kernel_size = int(action_arr[1].split("-")[1])
         layer_pred1 = int(action_arr[2].split("-")[1])
         layer_pred2 = int(action_arr[3].split("-")[1])
