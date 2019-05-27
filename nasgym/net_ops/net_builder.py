@@ -162,12 +162,12 @@ def safe_concat(tensor_a, tensor_b, name):
     fixed_b = fix_tensor_shape(
         tensor_target=tensor_b,
         tensor_reference=tensor_a,
-        free_axis=1
+        free_axis=-1
     )
     fixed_a = fix_tensor_shape(
         tensor_target=tensor_a,
         tensor_reference=tensor_b,
-        free_axis=1
+        free_axis=-1
     )
 
     concatenated = tf.keras.layers.concatenate(
@@ -222,6 +222,9 @@ def fix_tensor_shape(tensor_target, tensor_reference, free_axis=1, name="pad"):
 
     if ref_rank != target_rank:
         raise ValueError("Tensors must have the same dimension.")
+
+    if free_axis < 0:
+        free_axis = ref_rank
 
     free_axis -= 1  # Shift the axis to start with 0 for simplicity
 
