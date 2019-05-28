@@ -235,7 +235,7 @@ already exists the DB of experiments", composed_id
         #    ones will always be invalid too.)
         done = self.step_count == self.max_steps or \
             NASEnvHelper.is_terminal(action, self.actions_info) or not status \
-            or self.state[0, 0] >= 0  # meaning all layers have been occupied
+            or self.state[0, 0] != 0  # meaning all layers have been occupied
 
         # 7. Build additional information we want to return (as in gym.Env)
         info_dict = {
