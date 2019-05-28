@@ -162,12 +162,12 @@ def safe_concat(tensor_a, tensor_b, name):
     fixed_b = fix_tensor_shape(
         tensor_target=tensor_b,
         tensor_reference=tensor_a,
-        free_axis=-1
+        free_axis=1
     )
     fixed_a = fix_tensor_shape(
         tensor_target=tensor_a,
         tensor_reference=tensor_b,
-        free_axis=-1
+        free_axis=1
     )
 
     concatenated = tf.keras.layers.concatenate(
@@ -175,6 +175,7 @@ def safe_concat(tensor_a, tensor_b, name):
             fixed_a,
             fixed_b,
         ],
+        axis=3,
         name=name
     )
 
