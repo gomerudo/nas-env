@@ -8,6 +8,7 @@ from nasgym.dataset_handlers.default_handler import DefaultDatasetHandler
 
 # Import the configuration fron the .ini file
 CONFIG_INI = cr.read_configfile()
+print("Parameters in configuration file are:", CONFIG_INI)
 
 # Assign logger the specified name
 nas_logger = logging.getLogger(CONFIG_INI[cr.SEC_DEFAULT][cr.PROP_LOGGER_NAME])

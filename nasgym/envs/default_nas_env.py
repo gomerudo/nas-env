@@ -544,14 +544,15 @@ class NASEnvHelper:
             nas_logger.debug(
                 "Reward of architecture %s will be computed", composed_id
             )
+
             nas_trainer = EarlyStopNASTrainer(
                 encoded_network=state.copy(),
                 input_shape=infer_data_shape(train_features),
                 n_classes=infer_n_classes(train_labels),
                 batch_size=final_batch_size,
                 log_path="{lp}/trainer-{h}".format(lp=log_path, h=composed_id),
-                mu=final_rho,
-                rho=final_mu,
+                mu=final_mu,
+                rho=final_rho,
                 variable_scope="cnn-{h}".format(h=hash_state)
             )
             nas_logger.debug(

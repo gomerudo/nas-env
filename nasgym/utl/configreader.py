@@ -1,5 +1,6 @@
 """Read the configuration file (.ini) with properties of the environment."""
 
+import os
 import configparser
 
 SEC_DEFAULT = "DEFAULT"
@@ -43,7 +44,9 @@ def read_configfile():
     """Read the configuration file from a very specific location."""
     # Read the config file
     config = configparser.ConfigParser()
-    expected_location = "resources/config.ini"
+    expected_location = os.getenv(
+        'NAS_DMRL_CONFIG_FILE', 'resources/config.ini'
+    )
     config.read(expected_location)
 
     # Prepare the resulting dictionary
