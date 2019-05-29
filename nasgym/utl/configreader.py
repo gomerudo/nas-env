@@ -47,6 +47,8 @@ def read_configfile():
     expected_location = os.getenv(
         'NAS_DMRL_CONFIG_FILE', 'resources/config.ini'
     )
+    print("Reading configuration file from", expected_location)
+
     config.read(expected_location)
 
     # Prepare the resulting dictionary
