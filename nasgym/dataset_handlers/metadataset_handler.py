@@ -122,7 +122,7 @@ class MetaDatasetHandler(AbstractDatasetHandler):
         ]
 
         # We always start with the first element in the list
-        self._current_dataset = self._datasets_list[0]
+        self.set_current_dataset(self._datasets_list[0])
         super(MetaDatasetHandler, self).__init__(name=name)
 
     def n_datasets(self):
