@@ -65,6 +65,7 @@ def read_configfile():
     res[SEC_TRAINER_DEFAULT] = {}
     res[SEC_TRAINER_EARLYSTOP] = {}
     res[SEC_TRAINER_TENSORFLOW] = {}
+    res[SEC_METADATASET] = {}
 
     # We are interested in five sections. Since we need the configuration to be
     # valid, we hardcode the parsing. When the properties/sections are not in
