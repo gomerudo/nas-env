@@ -20,6 +20,7 @@ from nasgym import nas_logger
 from nasgym import CONFIG_INI
 from nasgym.database.default_db import DefaultExperimentsDatabase
 from nasgym.dataset_handlers.default_handler import AbstractDatasetHandler
+from nasgym.dataset_handlers.metadataset_handler import MetaDatasetHandler
 from nasgym.net_ops.net_builder import LTYPE_ADD
 from nasgym.net_ops.net_builder import LTYPE_AVGPOOLING
 from nasgym.net_ops.net_builder import LTYPE_CONCAT
@@ -131,11 +132,60 @@ Please use a valid one."
                 "Invalid type for dataset_handler. Use a class of type \
 AbstractDatasetHandler"
             )
-        self.dataset_handler = dataset_handler
+        
+
+        # TODO: Improve logic for the handler... it's such a mess right now!
+        try:
+            tfrecords_root = \
+                CONFIG_INI[cr.SEC_METADATASET][cr.PROP_TFRECORDS_ROOTDIR]
+
+            try:
+                final_batch_size = \
+                    CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_BATCHSIZE]
+                nas_logger.debug(
+                    "Using batch size from config.ini for metadataset handler.\
+ Set to %d",
+                    final_batch_size
+                )
+            except KeyError:
+                final_batch_size = 256
+
+            try:
+                final_split_prop = \
+                    CONFIG_INI[cr.SEC_METADATASET][cr.PROP_TRAIN_TEST_SPLIT_PROP]
+                nas_logger.debug(
+                    "Using train-test split proportion from config.ini .\
+Set to %d",
+                    final_split_prop
+                )
+            except KeyError:
+                final_split_prop = 0.33
+
+            try:
+                final_random_seed = \
+                    CONFIG_INI[cr.SEC_METADATASET][cr.PROP_RANDOMSEED]
+                nas_logger.debug(
+                    "Using random seed from config.ini . Set to %d",
+                    final_random_seed
+                )
+            except KeyError:
+                final_random_seed = 32
+
+            self.dataset_handler = MetaDatasetHandler(
+                tfrecords_rootdir=tfrecords_root,
+                name="metadataset_handler",
+                batch_size=final_batch_size,
+                split_prop=final_split_prop,
+                random_seed=final_random_seed
+            )
+        except KeyError:
+            nas_logger.info(
+                "No metadataset configuration. Default handler will be used."
+            )
+            self.dataset_handler = dataset_handler
 
         # 5. Reset the environment and the step count
         self.state = self.reset()
-        self.step_count = 0
 
     def _load_from_file(self, config_file):
         # 1. Check the validity of the configuration file
@@ -197,11 +247,19 @@ already exists the DB of experiments", composed_id
                 composed_id
             )
             start = time.time()
-            reward, accuracy, density, flops, status = NASEnvHelper.reward(
-                self.state,
-                self.dataset_handler,
-                self.log_path
-            )
+            if isinstance(self.dataset_handler, MetaDatasetHandler):
+                reward, accuracy, density, flops, status = \
+                    NASEnvHelper.reward_metadataset(
+                        self.state,
+                        self.dataset_handler,
+                        self.log_path
+                    )
+            else:
+                reward, accuracy, density, flops, status = NASEnvHelper.reward(
+                    self.state,
+                    self.dataset_handler,
+                    self.log_path
+                )
             end = time.time()
             running_time = int(end - start)
             # Fix the reward if they go outside the boundaries: Not really
@@ -498,6 +556,115 @@ class NASEnvHelper:
             layer_type = LTYPE_TERMINAL
 
         return [layer_type, layer_kernel_size, layer_pred1, layer_pred2]
+
+    @staticmethod
+    def reward_metadataset(state, dataset_handler, log_path="./workspace"):
+        try:
+            hash_state = compute_str_hash(state_to_string(state))
+            composed_id = "{d}-{h}".format(
+                d=dataset_handler.current_dataset_name(), h=hash_state
+            )
+
+            try:
+                final_batch_size = \
+                    CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_BATCHSIZE]
+                nas_logger.debug(
+                    "Using batch size from config.ini. Set to %d",
+                    final_batch_size
+                )
+            except KeyError:
+                final_batch_size = 256
+
+            try:
+                final_rho = \
+                    CONFIG_INI[cr.SEC_TRAINER_EARLYSTOP][cr.PROP_RHOWEIGHT]
+                nas_logger.debug(
+                    "Using rho from config.ini. Set to %d",
+                    final_rho
+                )
+            except KeyError:
+                final_rho = 0.5
+
+            try:
+                final_mu = \
+                    CONFIG_INI[cr.SEC_TRAINER_EARLYSTOP][cr.PROP_MUWEIGHT]
+                nas_logger.debug(
+                    "Using mu from config.ini. Set to %d",
+                    final_mu
+                )
+            except KeyError:
+                final_mu = 0.5
+
+            nas_logger.debug(
+                "Reward of architecture %s will be computed", composed_id
+            )
+
+            nas_trainer = EarlyStopNASTrainer(
+                encoded_network=state.copy(),
+                input_shape=(84, 84, 3),  # Hardcoded cause we know it
+                n_classes=dataset_handler.current_n_classes(),
+                batch_size=final_batch_size,
+                log_path="{lp}/trainer-{h}".format(lp=log_path, h=composed_id),
+                mu=final_mu,
+                rho=final_rho,
+                variable_scope="cnn-{h}".format(h=hash_state)
+            )
+            nas_logger.debug(
+                "Trainer used for reward computation is %s. Object's \
+    attributes are:", type(nas_trainer)
+            )
+
+            nas_logger.debug("  input_shape: %s", nas_trainer.input_shape)
+            nas_logger.debug("  batch_size: %s", nas_trainer.batch_size)
+            nas_logger.debug("  log_path: %s", nas_trainer.log_path)
+            nas_logger.debug("  mu: %s", nas_trainer.mu)
+            nas_logger.debug("  rho: %s", nas_trainer.rho)
+            nas_logger.debug(
+                "  variable_scope: %s", nas_trainer.variable_scope
+            )
+
+            try:
+                final_n_epochs = \
+                    CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_NEPOCHS]
+                nas_logger.debug(
+                    "Using n_epochs from config.ini. Set to %d",
+                    final_n_epochs
+                )
+            except KeyError:
+                final_n_epochs = 12
+
+            nas_logger.debug("Training architecture %s", composed_id)
+            nas_trainer.train(
+                train_data=None,
+                train_labels=None,
+                train_input_fn=lambda: dataset_handler.current_train_set(),
+                n_epochs=final_n_epochs  # As specified by BlockQNN
+            )
+
+            nas_logger.debug("Evaluating architecture %s", composed_id)
+            res = nas_trainer.evaluate(
+                eval_data=None,
+                eval_labels=None,
+                eval_input_fn=lambda: dataset_handler.current_validation_set()
+            )
+            nas_logger.debug(
+                "Train-evaluation procedure finished for architecture %s",
+                composed_id
+            )
+
+            accuracy = res['accuracy']
+            # Compute the refined reward as defined
+            reward = accuracy*100 - nas_trainer.weighted_log_density - \
+                nas_trainer.weighted_log_flops
+
+            return reward, accuracy, nas_trainer.density, nas_trainer.flops, \
+                True
+        except Exception as ex:  # pylint: disable=broad-except
+            nas_logger.info(
+                "Reward computation of architecture %s failed with exception \
+    of type %s. Message is: %s", composed_id, type(ex), str(ex)
+            )
+            return 0., 0., 0., 0., False
 
     @staticmethod
     def reward(state, dataset_handler, log_path="./workspace"):

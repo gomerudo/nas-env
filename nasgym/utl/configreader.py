@@ -8,6 +8,7 @@ SEC_NASENV_DEFAULT = "nasenv.default"
 SEC_TRAINER_DEFAULT = "trainer.default"
 SEC_TRAINER_EARLYSTOP = "trainer.earlystop"
 SEC_TRAINER_TENSORFLOW = "trainer.tensorflow"
+SEC_METADATASET = "metadataset"
 
 # Default
 PROP_LOGPATH = "LogPath"
@@ -37,6 +38,12 @@ PROP_ALLOW_MEMORYGROWTH = "AllowMemoryGrowth"
 # Trainer Early Stop
 PROP_MUWEIGHT = "MuWeight"
 PROP_RHOWEIGHT = "RhoWeight"
+
+# Metadataset
+PROP_TFRECORDS_ROOTDIR = "TFRecordsRootDir"
+PROP_DATASETID = "DatasetID"
+PROP_TRAIN_TEST_SPLIT_PROP = "TrainTestSplitProp"
+PROP_RANDOMSEED = "RandomSeed"
 
 
 # TODO: handle defaults
@@ -208,6 +215,40 @@ def read_configfile():
                 bool
             )
 
+    # SECTION 6: Metadataset
+    if _section_exists(SEC_METADATASET, config):
+        if PROP_DATASETID in config[SEC_METADATASET]:
+            _set_property(
+                SEC_METADATASET,
+                PROP_DATASETID,
+                config,
+                res,
+                None
+            )
+        if PROP_TRAIN_TEST_SPLIT_PROP in config[SEC_METADATASET]:
+            _set_property(
+                SEC_METADATASET,
+                PROP_TRAIN_TEST_SPLIT_PROP,
+                config,
+                res,
+                float
+            )
+        if PROP_TFRECORDS_ROOTDIR in config[SEC_METADATASET]:
+            _set_property(
+                SEC_METADATASET,
+                PROP_TFRECORDS_ROOTDIR,
+                config,
+                res,
+                None
+            )
+        if PROP_RANDOMSEED in config[SEC_METADATASET]:
+            _set_property(
+                SEC_METADATASET,
+                PROP_RANDOMSEED,
+                config,
+                res,
+                int
+            )
     return res
 
 
