@@ -155,7 +155,7 @@ AbstractDatasetHandler"
                     CONFIG_INI[cr.SEC_METADATASET][cr.PROP_TRAIN_TEST_SPLIT_PROP]
                 nas_logger.debug(
                     "Using train-test split proportion from config.ini .\
-Set to %d",
+Set to %f",
                     final_split_prop
                 )
             except KeyError:
@@ -579,7 +579,7 @@ class NASEnvHelper:
                 final_rho = \
                     CONFIG_INI[cr.SEC_TRAINER_EARLYSTOP][cr.PROP_RHOWEIGHT]
                 nas_logger.debug(
-                    "Using rho from config.ini. Set to %d",
+                    "Using rho from config.ini. Set to %f",
                     final_rho
                 )
             except KeyError:
@@ -589,7 +589,7 @@ class NASEnvHelper:
                 final_mu = \
                     CONFIG_INI[cr.SEC_TRAINER_EARLYSTOP][cr.PROP_MUWEIGHT]
                 nas_logger.debug(
-                    "Using mu from config.ini. Set to %d",
+                    "Using mu from config.ini. Set to %f",
                     final_mu
                 )
             except KeyError:
@@ -692,7 +692,7 @@ class NASEnvHelper:
                 final_rho = \
                     CONFIG_INI[cr.SEC_TRAINER_EARLYSTOP][cr.PROP_RHOWEIGHT]
                 nas_logger.debug(
-                    "Using rho from config.ini. Set to %d",
+                    "Using rho from config.ini. Set to %f",
                     final_rho
                 )
             except KeyError:
@@ -702,7 +702,7 @@ class NASEnvHelper:
                 final_mu = \
                     CONFIG_INI[cr.SEC_TRAINER_EARLYSTOP][cr.PROP_MUWEIGHT]
                 nas_logger.debug(
-                    "Using mu from config.ini. Set to %d",
+                    "Using mu from config.ini. Set to %f",
                     final_mu
                 )
             except KeyError:
