@@ -19,8 +19,8 @@ PROP_LOGGER_NAME = "LoggerName"
 PROP_CONFIGFILE = "ConfigFile"
 PROP_MAXSTEPS = "MaxSteps"
 PROP_DBFILE = "DbFile"
-PROP_ACTION_SPACE_TYPE = "DatasetHandler"
-PROP_DATASET_HANDLER = "ActionSpaceType"
+PROP_ACTION_SPACE_TYPE = "ActionSpaceType"
+PROP_DATASET_HANDLER = "DatasetHandler"
 PROP_TRAINER_TYPE = "TrainerType"
 
 # Trainer Default
