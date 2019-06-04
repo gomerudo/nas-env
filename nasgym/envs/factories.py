@@ -4,7 +4,7 @@ import tensorflow as tf
 from nasgym import nas_logger as logger
 from nasgym import CONFIG_INI
 import nasgym.utl.configreader as cr
-import nasgym.envs.envspecs_parsers as parsers
+from nasgym.envs.envspecs_parsers import DefaultEnvSpecsParser
 from nasgym.dataset_handlers.default_handler import DefaultDatasetHandler
 from nasgym.dataset_handlers.metadataset_handler import MetaDatasetHandler
 from nasgym.net_ops.net_trainer import EarlyStopNASTrainer
@@ -18,7 +18,7 @@ class EnvSpecsParserFactory:
     def get_parser(config_file, parser_type):
         """Return the parser of interest."""
         if parser_type == "default":
-            return parsers.DefaultEnvSpecsParser(config_file)
+            return DefaultEnvSpecsParser(config_file)
         if parser_type == "chained":
             # TODO: Make parser for chained structures
             pass

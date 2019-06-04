@@ -32,12 +32,8 @@ from nasgym.net_ops.net_builder import LTYPE_IDENTITY
 from nasgym.net_ops.net_builder import LTYPE_MAXPOOLING
 from nasgym.net_ops.net_builder import LTYPE_TERMINAL
 from nasgym.net_ops.net_utils import sort_sequence
-from nasgym.net_ops.net_trainer import EarlyStopNASTrainer
 from nasgym.utl.miscellaneous import compute_str_hash
 from nasgym.utl.miscellaneous import get_current_timestamp
-from nasgym.utl.miscellaneous import infer_data_shape
-from nasgym.utl.miscellaneous import infer_n_classes
-from nasgym.utl.miscellaneous import normalize_dataset
 from nasgym.utl.miscellaneous import state_to_string
 
 
