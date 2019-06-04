@@ -48,7 +48,7 @@ def parser(record_dataset):
     return {'x': image_normalized}, label
 
 
-def metadataset_input_fn(tfrecord_data, data_length, batch_size=128, 
+def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
                          is_train=True, split_prop=0.33, random_seed=32):
     """Input function for a tensorflow estimator."""
     # 1. Compute the length of the train-validation split
@@ -102,7 +102,6 @@ class MetaDatasetHandler(AbstractDatasetHandler):
             "dtd",
             "fungi",
             # "ilsvrc_2012"
-            "old_quickdraw",
             "omniglot",
             "quickdraw",
             "traffic_sign",
@@ -114,7 +113,6 @@ class MetaDatasetHandler(AbstractDatasetHandler):
             200,
             47,
             1394,
-            345,
             1623,
             345,
             43,

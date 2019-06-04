@@ -19,6 +19,8 @@ PROP_LOGGER_NAME = "LoggerName"
 PROP_CONFIGFILE = "ConfigFile"
 PROP_MAXSTEPS = "MaxSteps"
 PROP_DBFILE = "DbFile"
+PROP_ACTION_SPACE_TYPE = "DatasetHandler"
+PROP_DATASET_HANDLER = "ActionSpaceType"
 
 # Trainer Default
 PROP_BATCHSIZE = "BatchSize"
@@ -104,6 +106,24 @@ def read_configfile():
 
         if PROP_DBFILE in config[SEC_NASENV_DEFAULT]:
             _set_property(SEC_NASENV_DEFAULT, PROP_DBFILE, config, res, None)
+
+        if PROP_ACTION_SPACE_TYPE in config[SEC_NASENV_DEFAULT]:
+            _set_property(
+                SEC_NASENV_DEFAULT,
+                PROP_ACTION_SPACE_TYPE,
+                config,
+                res,
+                None
+            )
+
+        if PROP_DATASET_HANDLER in config[SEC_NASENV_DEFAULT]:
+            _set_property(
+                SEC_NASENV_DEFAULT,
+                PROP_DATASET_HANDLER,
+                config,
+                res,
+                None
+            )
 
     # SECTION 3: Default trainer
     if _section_exists(SEC_TRAINER_DEFAULT, config):

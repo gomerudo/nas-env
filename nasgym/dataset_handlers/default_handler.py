@@ -42,10 +42,6 @@ class DefaultDatasetHandler(AbstractDatasetHandler):
         self.train_labels = train_labels
         self.val_features = val_features
         self.val_labels = val_labels
-        # print("Shape of train_features is:", self.train_features.shape)
-        # print("Shape of train_labels is:", self.train_labels.shape)
-        # print("Shape of val_features is:", self.val_features.shape)
-        # print("Shape of val_labels is:", self.val_labels.shape)
 
         super(DefaultDatasetHandler, self).__init__(name=name)
 

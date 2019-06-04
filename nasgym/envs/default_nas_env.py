@@ -12,12 +12,13 @@ extend more NAS environments, use this class as a model.
 
 import time
 import numpy as np
-import yaml
 import gym
-from gym import spaces
 import nasgym.utl.configreader as cr
 from nasgym import nas_logger
 from nasgym import CONFIG_INI
+from nasgym.envs.envspecs_parsers import AbstractEnvSpecsParser
+from nasgym.envs.factories import EnvSpecsParserFactory
+from nasgym.envs.factories import DatasetHandlerFactory
 from nasgym.database.default_db import DefaultExperimentsDatabase
 from nasgym.dataset_handlers.default_handler import AbstractDatasetHandler
 from nasgym.dataset_handlers.metadataset_handler import MetaDatasetHandler
@@ -46,41 +47,26 @@ class DefaultNASEnv(gym.Env):
     reward_range = (0.0, 100.0)
 
     def __init__(self, config_file="resources/nasenv.yml", max_steps=100,
-                 max_layers=10, dataset_handler=None,
-                 db_file="workspace/db_experiments.csv", log_path="workspace"):
+                 dataset_handler="default", action_space_type="default",
+                 db_file="workspace/db_experiments.csv", log_path="workspace",
+                 **kwargs):
         """Initialize the NAS environment, via a configuration file."""
         nas_logger.debug("Creating instance of the Default NAS environment")
-        # 1. Assign the class' properties
-        self.max_steps = max_steps
-        self.max_layers = max_layers  # TODO: not used now, remove?
-        self.log_path = log_path
 
-        # Try to set each of the properties from config.ini
-        try:
-            self.max_steps = \
-                CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_MAXSTEPS]
-        except KeyError:
-            pass
-
-        try:
-            self.log_path = CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_LOGPATH]
-        except KeyError:
-            pass
-
-        try:
-            db_file = CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_DBFILE]
-        except KeyError:
-            pass
-
-        try:
-            config_file = CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_CONFIGFILE]
-        except KeyError:
-            pass
+        # 1. Try to set each of the properties from config.ini or arguments
+        self._read_params_from_config(
+            max_steps=max_steps,
+            log_path=log_path,
+            db_file=db_file,
+            config_file=config_file,
+            action_space_type=action_space_type,
+            dataset_handler=dataset_handler
+        )
 
         # 2. Instanciate the database of experiments and its columns. Note that
         #    we never overwrite the file but append.
         self.db_manager = DefaultExperimentsDatabase(
-            file_name=db_file,
+            file_name=self.db_file,
             headers=[
                 "dataset-nethash",
                 "netstring",
@@ -97,11 +83,82 @@ class DefaultNASEnv(gym.Env):
         )
 
         # 3. Get the Gym spaces: observtions and actions
-        self.observation_space, self.action_space, self.actions_info = \
-            self._load_from_file(config_file)
+        if isinstance(self.action_space_type, AbstractEnvSpecsParser):
+            space_parser = self.action_space_type
+        elif isinstance(self.action_space_type, str):
+            space_parser = EnvSpecsParserFactory.get_parser(
+                config_file=self.config_file,
+                parser_type=self.action_space_type
+            )
+        else:
+            raise TypeError("Invalid action_space_type")
 
-        # Store the actions_info as a csv
-        actions_info_df = DefaultExperimentsDatabase(
+        # Load the configuration and assign the values, then export them
+        space_parser.reload_configuration()
+        self.observation_space = space_parser.observation_space
+        self.action_space, self.actions_info = space_parser.action_space
+        self._export_actions_info()
+
+        # 4. Validate and assign the dataset handler that will provide the
+        #    image classification task to solve (this task might change
+        #    between experiments)
+        if isinstance(self.dataset_handler, AbstractDatasetHandler):
+            pass  # It is already assigned
+        elif isinstance(self.dataset_handler, str):
+            self.dataset_handler = DatasetHandlerFactory.get_handler(
+                handler_type=self.dataset_handler, **kwargs
+            )
+        else:
+            raise TypeError("Invalid type for dataset_handler")
+
+        # 5. Reset the environment and the step count so we start from scratch
+        self.state = self.reset()
+
+    def _read_params_from_config(self, max_steps, log_path, db_file,
+                                 config_file, action_space_type,
+                                 dataset_handler):
+        # The max_steps
+        try:
+            self.max_steps = \
+                CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_MAXSTEPS]
+        except KeyError:
+            self.max_steps = max_steps
+
+        # The log_path
+        try:
+            self.log_path = CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_LOGPATH]
+        except KeyError:
+            self.log_path = log_path
+
+        # The db_file
+        try:
+            self.db_file = CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_DBFILE]
+        except KeyError:
+            self.db_file = db_file
+
+        # The config_file (.yml)
+        try:
+            self.config_file = \
+                CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_CONFIGFILE]
+        except KeyError:
+            self.config_file = config_file
+
+        # The action_space_type
+        try:
+            self.action_space_type = \
+                CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_ACTION_SPACE_TYPE]
+        except KeyError:
+            self.action_space_type = action_space_type
+
+        # The dataset handler
+        try:
+            self.dataset_handler = \
+                CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_DATASET_HANDLER]
+        except KeyError:
+            self.dataset_handler = dataset_handler
+
+    def _export_actions_info(self):
+        actions_info_db = DefaultExperimentsDatabase(
             file_name="{root}/{name}".format(
                 root=self.log_path,
                 name="actions_info.csv"
@@ -115,98 +172,8 @@ class DefaultNASEnv(gym.Env):
         )
 
         for key, value in self.actions_info.items():
-            actions_info_df.add({'id': key, 'action': value})
-        actions_info_df.save()
-
-        # 4. Validate and assign the dataset handler that will provide the
-        #    image classification task to solve (this task might change
-        #    between experiments)
-        if dataset_handler is None:
-            raise ValueError(
-                "It is not possible to use a `None` dataset_handler. \
-Please use a valid one."
-            )
-
-        if not isinstance(dataset_handler, AbstractDatasetHandler):
-            raise TypeError(
-                "Invalid type for dataset_handler. Use a class of type \
-AbstractDatasetHandler"
-            )
-        
-
-        # TODO: Improve logic for the handler... it's such a mess right now!
-        try:
-            tfrecords_root = \
-                CONFIG_INI[cr.SEC_METADATASET][cr.PROP_TFRECORDS_ROOTDIR]
-
-            try:
-                final_batch_size = \
-                    CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_BATCHSIZE]
-                nas_logger.debug(
-                    "Using batch size from config.ini for metadataset handler.\
- Set to %d",
-                    final_batch_size
-                )
-            except KeyError:
-                final_batch_size = 256
-
-            try:
-                final_split_prop = \
-                    CONFIG_INI[cr.SEC_METADATASET][cr.PROP_TRAIN_TEST_SPLIT_PROP]
-                nas_logger.debug(
-                    "Using train-test split proportion from config.ini .\
-Set to %f",
-                    final_split_prop
-                )
-            except KeyError:
-                final_split_prop = 0.33
-
-            try:
-                final_random_seed = \
-                    CONFIG_INI[cr.SEC_METADATASET][cr.PROP_RANDOMSEED]
-                nas_logger.debug(
-                    "Using random seed from config.ini . Set to %d",
-                    final_random_seed
-                )
-            except KeyError:
-                final_random_seed = 32
-
-            self.dataset_handler = MetaDatasetHandler(
-                tfrecords_rootdir=tfrecords_root,
-                name="metadataset_handler",
-                batch_size=final_batch_size,
-                split_prop=final_split_prop,
-                random_seed=final_random_seed
-            )
-        except KeyError:
-            nas_logger.info(
-                "No metadataset configuration. Default handler will be used."
-            )
-            self.dataset_handler = dataset_handler
-
-        # 5. Reset the environment and the step count
-        self.state = self.reset()
-
-    def _load_from_file(self, config_file):
-        # 1. Check the validity of the configuration file
-        if not is_valid_config_file(config_file):
-            raise ValueError(
-                "Invalid configuration file. Please use a valid format."
-            )
-
-        nas_logger.debug(
-            "Loading Default NAS configuration from file %s", config_file
-        )
-        # 2. Load parameters from file
-        file_parser = DefaultNASEnvParser(config_file)
-
-        # 3. Assign the desired return variables: the actual spaces
-        act_s = file_parser.action_space
-        act_info = file_parser.action_info
-        obs_s = file_parser.observation_space
-
-        # Finally, return the the spaces and the dictionary of actions.
-        return obs_s, act_s, act_info
+            actions_info_db.add({'id': key, 'action': value})
+        actions_info_db.save()
 
     def step(self, action):
         """Perform an step in the environment, given an action."""
@@ -346,135 +313,6 @@ already exists the DB of experiments", composed_id
         # We always rely on the dataset handler, since the switching is
         # independent from the environment
         self.dataset_handler.next_dataset()
-
-
-class DefaultNASEnvParser:
-    """Default parser."""
-
-    def __init__(self, config_file):
-        """Constructor."""
-        self.config_file = config_file
-
-        # Perform only validations
-        if not is_valid_config_file(self.config_file):
-            raise ValueError(
-                "Invalid configuration file. Please use a valid format."
-            )
-        # Load file
-        self.reload_file()
-
-    def reload_file(self):
-        """Load the config file from scratch."""
-        nas_logger.debug("Re-loading configuration file %s", self.config_file)
-        with open(self.config_file, 'r') as yaml_file:
-            content = yaml.load(yaml_file)
-            # Validate the content
-            self._nasenv_dict = self._validate_and_read(content)
-
-        # Assign the important properties
-        self.config_name = self._nasenv_dict['name']
-        self.config_version = self._nasenv_dict['version']
-        self.max_nlayers = self._nasenv_dict['max_nlayers']
-
-        # Load the action space and the configuration space
-        self.action_space, self.action_info = self._populate_action_space()
-        self.observation_space = self._populate_observation_space()
-
-    def _populate_action_space(self):
-        nas_logger.debug("Obtaining the action space for the environment")
-        action_info = {}
-        counter = 0
-
-        for layer in self._nasenv_dict['layers']:
-            for layer_key, layer_config in layer.items():
-                self._validate_layer_config(layer_config)
-
-                # Check Kernel Size
-                kernels_list = [0] if layer_config['kernel_size'] is None else\
-                    layer_config['kernel_size']
-
-                pred1_list = [0] if not layer_config['pred1'] else \
-                    range(0, self.max_nlayers)
-
-                # For every kernel
-                for kernel in kernels_list:
-                    # For every predecesor1
-                    for c_pred1 in pred1_list:
-                        # For every predecesor2
-                        pred2_list = [0] if not layer_config['pred2'] else \
-                            range(0, c_pred1)
-                        for c_pred2 in pred2_list:
-                            action_type = \
-                                "{type}_k-{kernel}_pred1-{pred1}_pred2-\
-{pred2}".format(type=layer_key, kernel=kernel, pred1=c_pred1, pred2=c_pred2)
-                            action_info[counter] = action_type
-                            counter += 1
-
-        # The actual set of actions
-        # action_set = list(range(counter))
-        return spaces.Discrete(counter), action_info
-
-    def _populate_observation_space(self):
-        return spaces.Box(
-            0,
-            np.inf,
-            shape=[self.max_nlayers, 5],  # Default length per NSC is 5
-            dtype='int32'
-        )
-
-    def _validate_layer_config(self, layer):
-        expected = set(['id', 'kernel_size', 'pred1', 'pred2'])
-        observed_keys = set(layer.keys())
-
-        if not expected <= observed_keys:
-            raise RuntimeError(
-                "Keys for layer {name} are invalid. Expected elements are: \
-{ex}".format(name=layer, ex=expected)
-            )
-
-    def _validate_and_read(self, content):
-        try:
-            # Try to get the 'nasenv' object
-            nasenv_dict = content['nasenv']
-
-            # Validate the minimum set of expected keys is correct
-            min_expected = set(['max_nlayers', 'layers', 'encoding'])
-            observed_keys = set(nasenv_dict.keys())
-            if not min_expected <= observed_keys:
-                raise RuntimeError(
-                    "Keys in YAML file are not the minimal expected for the \
-NAS environment definition. Minimun expected is {me}".format(me=min_expected)
-                )
-
-            # Validate that we have valid max_n_layers, encoding and layers
-            #   1. The max_nlayers
-            try:
-                nasenv_dict['max_nlayers'] = int(nasenv_dict['max_nlayers'])
-            except TypeError:
-                raise RuntimeError("Property max_n_layers is not an integer")
-            #   2. The encoding is valid
-            if nasenv_dict['encoding'] != "NSC":
-                raise RuntimeError("Invalid encoding for configuration file.")
-
-            if not isinstance(nasenv_dict['layers'], list):
-                raise RuntimeError("Layers must be a valid .")
-            # Finally, assign the properties to the object
-            #   1. the configuration name
-            try:
-                _ = nasenv_dict['name']
-            except KeyError:
-                nasenv_dict['name'] = "Unknown NAS Configuration"
-            #   2. the configuration version
-            try:
-                _ = str(nasenv_dict['version'])
-            except KeyError:
-                nasenv_dict['version'] = "1.0"
-
-            return nasenv_dict
-        except KeyError:
-            raise RuntimeError(
-                "Invalid config file. Does not contain a 'nasenv' definition"
-            )
 
 
 class NASEnvHelper:

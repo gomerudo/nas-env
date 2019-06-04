@@ -28,20 +28,20 @@ ch.setFormatter(
 # Assign the stream handler to the logger
 nas_logger.addHandler(ch)
 
-(train_data, train_labels), (eval_data, eval_labels) = \
-    tf.keras.datasets.cifar10.load_data()
+# (train_data, train_labels), (eval_data, eval_labels) = \
+#     tf.keras.datasets.cifar10.load_data()
 
-handler = DefaultDatasetHandler(
-    train_data, train_labels, eval_data, eval_labels, "cifar10"
-)
+# handler = DefaultDatasetHandler(
+#     train_data, train_labels, eval_data, eval_labels, "cifar10"
+# )
 
-config_file = "nas-env/resources/nasenv.yml"
+# config_file = "nas-env/resources/nasenv.yml"
 
 register(
     id='NAS_cifar10-v1',
     entry_point='nasgym.envs:DefaultNASEnv',
-    kwargs={
-        'config_file': config_file,
-        'dataset_handler': handler
-    }
+    # kwargs={
+    #     'config_file': config_file,
+    #     'dataset_handler': handler
+    # }
 )
