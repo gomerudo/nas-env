@@ -154,12 +154,18 @@ class MetaDatasetHandler(AbstractDatasetHandler):
         return self._current_dataset
 
     def current_n_observations(self):
+        """Return the current number of observations."""
         return self._current_datalength
 
     def current_n_classes(self):
+        """Return the current number of classes in the dataset."""
         return self._datasets_n_classes[
             self._datasets_list.index(self._current_dataset)
         ]
+
+    def current_shape(self):
+        """Return the metadataset shape."""
+        return (84, 84, 3)
 
     def next_dataset(self):
         """Switch the dataset to work with."""

@@ -19,8 +19,10 @@ from nasgym import CONFIG_INI
 from nasgym.envs.envspecs_parsers import AbstractEnvSpecsParser
 from nasgym.envs.factories import EnvSpecsParserFactory
 from nasgym.envs.factories import DatasetHandlerFactory
+from nasgym.envs.factories import TrainerFactory
 from nasgym.database.default_db import DefaultExperimentsDatabase
 from nasgym.dataset_handlers.default_handler import AbstractDatasetHandler
+from nasgym.dataset_handlers.default_handler import DefaultDatasetHandler
 from nasgym.dataset_handlers.metadataset_handler import MetaDatasetHandler
 from nasgym.net_ops.net_builder import LTYPE_ADD
 from nasgym.net_ops.net_builder import LTYPE_AVGPOOLING
@@ -35,7 +37,6 @@ from nasgym.utl.miscellaneous import compute_str_hash
 from nasgym.utl.miscellaneous import get_current_timestamp
 from nasgym.utl.miscellaneous import infer_data_shape
 from nasgym.utl.miscellaneous import infer_n_classes
-from nasgym.utl.miscellaneous import is_valid_config_file
 from nasgym.utl.miscellaneous import normalize_dataset
 from nasgym.utl.miscellaneous import state_to_string
 
@@ -213,21 +214,15 @@ already exists the DB of experiments", composed_id
                 "Reward for architecture %s has not been found in the DB",
                 composed_id
             )
+
             start = time.time()
-            if isinstance(self.dataset_handler, MetaDatasetHandler):
-                reward, accuracy, density, flops, status = \
-                    NASEnvHelper.reward_metadataset(
-                        self.state,
-                        self.dataset_handler,
-                        self.log_path
-                    )
-            else:
-                reward, accuracy, density, flops, status = NASEnvHelper.reward(
-                    self.state,
-                    self.dataset_handler,
-                    self.log_path
-                )
+            reward, accuracy, density, flops, status = NASEnvHelper.reward(
+                self.state,
+                self.dataset_handler,
+                self.log_path
+            )
             end = time.time()
+
             running_time = int(end - start)
             # Fix the reward if they go outside the boundaries: Not really
             # needed but just to make sure...
@@ -396,170 +391,33 @@ class NASEnvHelper:
         return [layer_type, layer_kernel_size, layer_pred1, layer_pred2]
 
     @staticmethod
-    def reward_metadataset(state, dataset_handler, log_path="./workspace"):
-        try:
-            hash_state = compute_str_hash(state_to_string(state))
-            composed_id = "{d}-{h}".format(
-                d=dataset_handler.current_dataset_name(), h=hash_state
-            )
-
-            try:
-                final_batch_size = \
-                    CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_BATCHSIZE]
-                nas_logger.debug(
-                    "Using batch size from config.ini. Set to %d",
-                    final_batch_size
-                )
-            except KeyError:
-                final_batch_size = 256
-
-            try:
-                final_rho = \
-                    CONFIG_INI[cr.SEC_TRAINER_EARLYSTOP][cr.PROP_RHOWEIGHT]
-                nas_logger.debug(
-                    "Using rho from config.ini. Set to %f",
-                    final_rho
-                )
-            except KeyError:
-                final_rho = 0.5
-
-            try:
-                final_mu = \
-                    CONFIG_INI[cr.SEC_TRAINER_EARLYSTOP][cr.PROP_MUWEIGHT]
-                nas_logger.debug(
-                    "Using mu from config.ini. Set to %f",
-                    final_mu
-                )
-            except KeyError:
-                final_mu = 0.5
-
-            nas_logger.debug(
-                "Reward of architecture %s will be computed", composed_id
-            )
-
-            nas_trainer = EarlyStopNASTrainer(
-                encoded_network=state.copy(),
-                input_shape=(84, 84, 3),  # Hardcoded cause we know it
-                n_classes=dataset_handler.current_n_classes(),
-                batch_size=final_batch_size,
-                log_path="{lp}/trainer-{h}".format(lp=log_path, h=composed_id),
-                mu=final_mu,
-                rho=final_rho,
-                variable_scope="cnn-{h}".format(h=hash_state)
-            )
-            nas_logger.debug(
-                "Trainer used for reward computation is %s. Object's \
-    attributes are:", type(nas_trainer)
-            )
-
-            nas_logger.debug("  input_shape: %s", nas_trainer.input_shape)
-            nas_logger.debug("  batch_size: %s", nas_trainer.batch_size)
-            nas_logger.debug("  log_path: %s", nas_trainer.log_path)
-            nas_logger.debug("  mu: %s", nas_trainer.mu)
-            nas_logger.debug("  rho: %s", nas_trainer.rho)
-            nas_logger.debug(
-                "  variable_scope: %s", nas_trainer.variable_scope
-            )
-
-            try:
-                final_n_epochs = \
-                    CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_NEPOCHS]
-                nas_logger.debug(
-                    "Using n_epochs from config.ini. Set to %d",
-                    final_n_epochs
-                )
-            except KeyError:
-                final_n_epochs = 12
-
-            nas_logger.debug("Training architecture %s", composed_id)
-            nas_trainer.train(
-                train_data=None,
-                train_labels=None,
-                train_input_fn=lambda: dataset_handler.current_train_set(),
-                n_epochs=final_n_epochs  # As specified by BlockQNN
-            )
-
-            nas_logger.debug("Evaluating architecture %s", composed_id)
-            res = nas_trainer.evaluate(
-                eval_data=None,
-                eval_labels=None,
-                eval_input_fn=lambda: dataset_handler.current_validation_set()
-            )
-            nas_logger.debug(
-                "Train-evaluation procedure finished for architecture %s",
-                composed_id
-            )
-
-            accuracy = res['accuracy']
-            # Compute the refined reward as defined
-            reward = accuracy*100 - nas_trainer.weighted_log_density - \
-                nas_trainer.weighted_log_flops
-
-            return reward, accuracy, nas_trainer.density, nas_trainer.flops, \
-                True
-        except Exception as ex:  # pylint: disable=broad-except
-            nas_logger.info(
-                "Reward computation of architecture %s failed with exception \
-    of type %s. Message is: %s", composed_id, type(ex), str(ex)
-            )
-            return 0., 0., 0., 0., False
-
-    @staticmethod
     def reward(state, dataset_handler, log_path="./workspace"):
         """Perform the training of the network, given (state, dataset) pair."""
         try:
-            train_features, train_labels = dataset_handler.current_train_set()
-            val_features, val_labels = dataset_handler.current_validation_set()
 
             hash_state = compute_str_hash(state_to_string(state))
             composed_id = "{d}-{h}".format(
                 d=dataset_handler.current_dataset_name(), h=hash_state
             )
 
-            try:
-                final_batch_size = \
-                    CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_BATCHSIZE]
-                nas_logger.debug(
-                    "Using batch size from config.ini. Set to %d",
-                    final_batch_size
-                )
-            except KeyError:
-                final_batch_size = 256
-
-            try:
-                final_rho = \
-                    CONFIG_INI[cr.SEC_TRAINER_EARLYSTOP][cr.PROP_RHOWEIGHT]
-                nas_logger.debug(
-                    "Using rho from config.ini. Set to %f",
-                    final_rho
-                )
-            except KeyError:
-                final_rho = 0.5
-
-            try:
-                final_mu = \
-                    CONFIG_INI[cr.SEC_TRAINER_EARLYSTOP][cr.PROP_MUWEIGHT]
-                nas_logger.debug(
-                    "Using mu from config.ini. Set to %f",
-                    final_mu
-                )
-            except KeyError:
-                final_mu = 0.5
-
             nas_logger.debug(
                 "Reward of architecture %s will be computed", composed_id
             )
 
-            nas_trainer = EarlyStopNASTrainer(
-                encoded_network=state.copy(),
-                input_shape=infer_data_shape(train_features),
-                n_classes=infer_n_classes(train_labels),
-                batch_size=final_batch_size,
+            try:
+                trainer_type = \
+                    CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_TRAINER_TYPE]
+            except KeyError:
+                trainer_type = "early-stop"
+
+            nas_trainer = TrainerFactory.get_trainer(
+                trainer_type=trainer_type,
+                state=state.copy(),
+                dataset_handler=dataset_handler,
                 log_path="{lp}/trainer-{h}".format(lp=log_path, h=composed_id),
-                mu=final_mu,
-                rho=final_rho,
                 variable_scope="cnn-{h}".format(h=hash_state)
             )
+
             nas_logger.debug(
                 "Trainer used for reward computation is %s. Object's \
 attributes are:", type(nas_trainer)
@@ -574,41 +432,49 @@ attributes are:", type(nas_trainer)
                 "  variable_scope: %s", nas_trainer.variable_scope
             )
 
-            train_features = normalize_dataset(
-                dataset=train_features,
-                baseline=255
-            )
-            train_labels = train_labels.astype(np.int32)
-
+            # Obtain values to passs to train/evaluate functions.
             try:
-                final_n_epochs = \
-                    CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_NEPOCHS]
-                nas_logger.debug(
-                    "Using n_epochs from config.ini. Set to %d",
-                    final_n_epochs
-                )
+                n_epochs = CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_NEPOCHS]
+                nas_logger.debug("Using n_epochs from config.ini")
             except KeyError:
-                final_n_epochs = 12
+                n_epochs = 12
 
-            nas_logger.debug("Training architecture %s", composed_id)
+            if isinstance(dataset_handler, MetaDatasetHandler):
+                train_features, train_labels = None, None
+                val_features, val_labels = None, None
+
+                def custom_train_input_fn():
+                    return dataset_handler.current_train_set()
+
+                def custom_eval_input_fn():
+                    return dataset_handler.current_validation_set()
+
+                train_input_fn = custom_train_input_fn
+                eval_input_fn = custom_eval_input_fn
+
+            if isinstance(dataset_handler, DefaultDatasetHandler):
+                train_features, train_labels = \
+                    dataset_handler.current_train_set()
+                val_features, val_labels = \
+                    dataset_handler.current_validation_set()
+                train_input_fn = "default"
+                eval_input_fn = "default"
+
+            nas_logger.debug(
+                "Training architecture %s for %d epochs", composed_id, n_epochs
+            )
             nas_trainer.train(
                 train_data=train_features,
                 train_labels=train_labels,
-                train_input_fn="default",
-                n_epochs=final_n_epochs  # As specified by BlockQNN
+                train_input_fn=train_input_fn,
+                n_epochs=n_epochs  # As specified by BlockQNN
             )
-
-            val_features = normalize_dataset(
-                dataset=val_features,
-                baseline=255
-            )
-            val_labels = val_labels.astype(np.int32)
 
             nas_logger.debug("Evaluating architecture %s", composed_id)
             res = nas_trainer.evaluate(
                 eval_data=val_features,
                 eval_labels=val_labels,
-                eval_input_fn="default"
+                eval_input_fn=eval_input_fn
             )
             nas_logger.debug(
                 "Train-evaluation procedure finished for architecture %s",

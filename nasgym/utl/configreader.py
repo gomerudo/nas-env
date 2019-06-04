@@ -21,6 +21,7 @@ PROP_MAXSTEPS = "MaxSteps"
 PROP_DBFILE = "DbFile"
 PROP_ACTION_SPACE_TYPE = "DatasetHandler"
 PROP_DATASET_HANDLER = "ActionSpaceType"
+PROP_TRAINER_TYPE = "TrainerType"
 
 # Trainer Default
 PROP_BATCHSIZE = "BatchSize"
@@ -120,6 +121,15 @@ def read_configfile():
             _set_property(
                 SEC_NASENV_DEFAULT,
                 PROP_DATASET_HANDLER,
+                config,
+                res,
+                None
+            )
+
+        if PROP_TRAINER_TYPE in config[SEC_NASENV_DEFAULT]:
+            _set_property(
+                SEC_NASENV_DEFAULT,
+                PROP_TRAINER_TYPE,
                 config,
                 res,
                 None

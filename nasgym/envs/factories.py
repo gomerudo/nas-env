@@ -7,6 +7,8 @@ import nasgym.utl.configreader as cr
 import nasgym.envs.envspecs_parsers as parsers
 from nasgym.dataset_handlers.default_handler import DefaultDatasetHandler
 from nasgym.dataset_handlers.metadataset_handler import MetaDatasetHandler
+from nasgym.net_ops.net_trainer import EarlyStopNASTrainer
+from nasgym.net_ops.net_trainer import DefaultNASTrainer
 
 
 class EnvSpecsParserFactory:
@@ -119,3 +121,75 @@ argument is expected."
                 "Random seed for meta-dataset handler set to: %d", random_seed
             )
         return tfrecords_root, batch_size, split_prop, random_seed
+
+
+class TrainerFactory:
+    """Factory for the trainer class."""
+
+    @staticmethod
+    def get_trainer(trainer_type, state, dataset_handler, log_path,
+                    variable_scope):
+        if trainer_type == "default":
+            batch_size = TrainerFactory._load_default_trainer_attributes()
+            return DefaultNASTrainer(
+                encoded_network=state,
+                input_shape=dataset_handler.current_shape(),
+                n_classes=dataset_handler.current_n_classes(),
+                batch_size=batch_size,
+                log_path=log_path,
+                variable_scope=variable_scope
+            )
+        if trainer_type == "early-stop":
+            batch_size = TrainerFactory._load_default_trainer_attributes()
+            # pylint: disable=invalid-name
+            rho, mu = TrainerFactory._load_early_stop_trainer_attributes()
+            return EarlyStopNASTrainer(
+                encoded_network=state,
+                input_shape=dataset_handler.current_shape(),
+                n_classes=dataset_handler.current_n_classes(),
+                batch_size=batch_size,
+                log_path=log_path,
+                mu=mu,
+                rho=rho,
+                variable_scope=variable_scope
+            )
+        raise ValueError("Unkown trainer_type '{t}'".format(t=trainer_type))
+
+    @staticmethod
+    def get_default_trainer(state, dataset_handler, log_path, variable_scope):
+        return TrainerFactory.get_trainer(
+            "default", state, dataset_handler, log_path, variable_scope
+        )
+
+    # pylint: disable=no-method-argument
+    def _load_default_trainer_attributes():
+        # Load Batch size
+        try:
+            batch_size = CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_BATCHSIZE]
+            logger.debug("Reading batch size for trainer from config.ini")
+        except KeyError:
+            batch_size = 256
+        finally:
+            logger.debug("Batch size for trainer set to: %d", batch_size)
+
+        return batch_size
+
+    # pylint: disable=no-method-argument
+    def _load_early_stop_trainer_attributes():
+        try:
+            rho = CONFIG_INI[cr.SEC_TRAINER_EARLYSTOP][cr.PROP_RHOWEIGHT]
+            logger.debug("Reading rho for trainer from config.ini")
+        except KeyError:
+            rho = 0.5
+        finally:
+            logger.debug("Rho for trainer set to: %f", rho)
+
+        try:
+            mu = CONFIG_INI[cr.SEC_TRAINER_EARLYSTOP][cr.PROP_MUWEIGHT]
+            logger.debug("Reading mu for trainer from config.ini")
+        except KeyError:
+            mu = 0.5
+        finally:
+            logger.debug("Mu for trainer set to: %f", mu)
+
+        return rho, mu
