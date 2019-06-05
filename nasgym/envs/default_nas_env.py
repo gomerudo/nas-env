@@ -35,6 +35,7 @@ from nasgym.net_ops.net_utils import sort_sequence
 from nasgym.utl.miscellaneous import compute_str_hash
 from nasgym.utl.miscellaneous import get_current_timestamp
 from nasgym.utl.miscellaneous import state_to_string
+from nasgym.utl.miscellaneous import get_current_layer
 
 
 class DefaultNASEnv(gym.Env):
@@ -270,6 +271,7 @@ already exists the DB of experiments", composed_id
             "action_inferred": NASEnvHelper.infer_action_encoding(
                 action,
                 self.actions_info,
+                get_current_layer(bkp_original)
             ),
             "reward": reward,
             "done": done,
@@ -317,7 +319,9 @@ class NASEnvHelper:
         NASEnvHelper.assert_valid_action(action, action_info)
 
         # Obtain the encoding
-        encoding = NASEnvHelper.infer_action_encoding(action, action_info)
+        encoding = NASEnvHelper.infer_action_encoding(
+            action, action_info, get_current_layer(space)
+        )
 
         nas_logger.debug(
             "Performing action %d, inferred as %s", action, encoding
@@ -350,7 +354,7 @@ class NASEnvHelper:
         return action_info[action].startswith("remove")
 
     @staticmethod
-    def infer_action_encoding(action, action_info):
+    def infer_action_encoding(action, action_info, current_layer=0):
         """Obtain the encoding of an action, given its identifier in a dict."""
         NASEnvHelper.assert_valid_action(action, action_info)
 
@@ -365,8 +369,18 @@ class NASEnvHelper:
         # Otherwise ...
         layer_type = action_arr[0]
         layer_kernel_size = int(action_arr[1].split("-")[1])
-        layer_pred1 = int(action_arr[2].split("-")[1])
-        layer_pred2 = int(action_arr[3].split("-")[1])
+        layer_pred1 = action_arr[2].split("-")[1]
+        layer_pred2 = action_arr[3].split("-")[1]
+
+        if layer_pred1 == "L":
+            layer_pred1 = current_layer
+        else:
+            layer_pred1 = int(layer_pred1)
+
+        if layer_pred2 == "BL":
+            layer_pred2 = 0 if not current_layer else current_layer - 1
+        else:
+            layer_pred2 = int(layer_pred2)
 
         # Option 2: use a dictionary and just do layer_type=dict[type]
         if layer_type == "convolution":

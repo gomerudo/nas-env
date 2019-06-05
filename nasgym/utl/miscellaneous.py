@@ -45,6 +45,11 @@ def state_to_string(state):
     return str_res
 
 
+def get_current_layer(state):
+    """Encode a state into a string."""
+    return state[state.shape[0] - 1][0]
+
+
 def get_current_timestamp():
     """Obtain the current system's timestamp."""
     current_time = time.time()

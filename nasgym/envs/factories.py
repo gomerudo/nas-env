@@ -5,6 +5,7 @@ from nasgym import nas_logger as logger
 from nasgym import CONFIG_INI
 import nasgym.utl.configreader as cr
 from nasgym.envs.envspecs_parsers import DefaultEnvSpecsParser
+from nasgym.envs.envspecs_parsers import ChainedEnvParser
 from nasgym.dataset_handlers.default_handler import DefaultDatasetHandler
 from nasgym.dataset_handlers.metadataset_handler import MetaDatasetHandler
 from nasgym.net_ops.net_trainer import EarlyStopNASTrainer
@@ -20,8 +21,7 @@ class EnvSpecsParserFactory:
         if parser_type == "default":
             return DefaultEnvSpecsParser(config_file)
         if parser_type == "chained":
-            # TODO: Make parser for chained structures
-            pass
+            return ChainedEnvParser(config_file)
         raise ValueError("Unkown parser_type '{t}'".format(t=parser_type))
 
     @staticmethod
