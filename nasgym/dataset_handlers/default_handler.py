@@ -93,7 +93,7 @@ class DefaultDatasetHandler(AbstractDatasetHandler):
 
     def current_n_classes(self):
         """Return the current dataset's number of classes."""
-        infer_n_classes(self.train_labels)
+        return infer_n_classes(self.train_labels)
 
     def current_shape(self):
         """Return the current dataset's shape."""
