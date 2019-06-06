@@ -52,5 +52,5 @@ class DefaultExperimentsDatabase:
     def save(self):
         """Save the current Data Frame as a file."""
         outfile = open(self.file_name, 'wb')
-        self._internal_df.to_csv(self.file_name, index=False)
+        self._internal_df.to_csv(outfile, index=False)
         outfile.close()
