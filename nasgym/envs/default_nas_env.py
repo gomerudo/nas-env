@@ -173,6 +173,9 @@ class DefaultNASEnv(gym.Env):
             actions_info_db.add({'id': key, 'action': value})
         actions_info_db.save()
 
+    def save_db_experiments(self):
+        self.db_manager.save()
+
     def step(self, action):
         """Perform an step in the environment, given an action."""
         # 1. Perform the action: this will alter the internal state
@@ -241,7 +244,6 @@ already exists the DB of experiments", composed_id
                     "is_valid": status
                 }
             )
-            self.db_manager.save()
 
         # 5. Increase the number of steps cause we are done with the action
         self.step_count += 1
