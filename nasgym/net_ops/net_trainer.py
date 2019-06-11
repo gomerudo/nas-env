@@ -339,7 +339,7 @@ Using custom input function for evaluation.")
                     eval_data,
                     eval_labels,
                     1,
-                    self.batch_size
+                    # self.batch_size
                 )
             else:
                 if eval_input_fn == "default":
@@ -348,7 +348,7 @@ Using custom input function for evaluation.")
                         x={"x": eval_data},
                         y=eval_labels,
                         num_epochs=1,
-                        batch_size=self.batch_size,
+                        # batch_size=self.batch_size,
                         shuffle=False
                     )
         nas_logger.debug("Running tensorflow evaluation")
