@@ -117,8 +117,8 @@ number of replicas available."
             # pylint: disable=no-member
             run_config = tf.estimator.RunConfig(
                 session_config=sess_config,
-                save_checkpoints_steps=None,
-                save_checkpoints_secs=None,
+                # save_checkpoints_steps=None,
+                # save_checkpoints_secs=None,
                 train_distribute=distributed_strategy,
                 eval_distribute=distributed_strategy
             )
@@ -261,23 +261,6 @@ number of replicas available."
         # Return the model_fn function
         return model_fn
 
-    def custom_input_fn(self, features, labels, epochs, batch_size):
-        # print("In input function. Shape of features is:", features.shape)
-        # print("In input function. Type of labels is:", labels.shape)
-        # print("In input function. Epochs is:", epochs)
-        # print("In input funciton. The batch size is:", batch_size)
-        dataset = tf.data.Dataset.from_tensor_slices(
-            ({"x": features}, labels)
-        )
-        dataset = dataset.apply(
-            tf.contrib.data.shuffle_and_repeat(batch_size*10, epochs)
-        )
-        dataset = dataset.batch(batch_size)
-
-        # print("In input function. Output shapes are (1):", dataset.output_shapes)
-        # print("In input function. Output types are (1):", dataset.output_types)
-        return dataset
-
     def train(self, train_data, train_labels, train_input_fn="default",
               n_epochs=12):
         """Train the self-network with the the given training configuration."""
@@ -285,12 +268,7 @@ number of replicas available."
             if os.environ.get('TF_ENABLE_DISTRIBUTED_STRATEGY') is not None:
                 nas_logger.debug("Distributed strategy has been indicated. \
 Using custom input function for training.")
-                train_input_fn = lambda: self.custom_input_fn(
-                    features=train_data,
-                    labels=train_labels,
-                    epochs=None,
-                    batch_size=self.batch_size
-                )
+                raise NotImplementedError("Distributed strategy not supported")
             else:
                 if train_input_fn in ["default"]:
                     if train_input_fn == "default":
@@ -335,12 +313,7 @@ value has been provided. Options are: 'default'"
             if os.environ.get('TF_ENABLE_DISTRIBUTED_STRATEGY') is not None:
                 nas_logger.debug("Distributed strategy has been indicated. \
 Using custom input function for evaluation.")
-                eval_input_fn = lambda: self.custom_input_fn(
-                    eval_data,
-                    eval_labels,
-                    1,
-                    # self.batch_size
-                )
+                raise NotImplementedError("Distributed strategy not supported")
             else:
                 if eval_input_fn == "default":
                     # pylint: disable=no-member
