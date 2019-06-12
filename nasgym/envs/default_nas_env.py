@@ -109,7 +109,8 @@ class DefaultNASEnv(gym.Env):
         else:
             raise TypeError("Invalid type for dataset_handler")
 
-        # 5. Reset the environment and the step count so we start from scratch
+        # 5. Reset the environment: a) set initial status as matrix of 0s, b)
+        #    set the step_count to 0, set the predecessor*_shift to 0.
         self.state = self.reset()
 
     def _read_params_from_config(self, max_steps, log_path, db_file,
@@ -178,14 +179,38 @@ class DefaultNASEnv(gym.Env):
 
     def step(self, action):
         """Perform an step in the environment, given an action."""
-        # 1. Perform the action: this will alter the internal state
-        bkp_original = self.state.copy()
-        self.state = NASEnvHelper.perform_action(
+        pred_oob = False  # Default: False. Value can change in the first 'if'
+        bkp_original = self.state.copy()  # The state before any action
+
+        # 1. Perform the action so we can act accordingly.
+        action_res = NASEnvHelper.perform_action(
             self.state,
             action,
-            self.actions_info
+            self.actions_info,
+            self.pred1_shift,
+            self.pred2_shift
         )
-        # 2. We always sort the sequence
+
+        # Option a) Shift the predecessors
+        if isinstance(action_res, tuple):
+            if action_res[1] == 'U':
+                shift = 1
+            if action_res[1] == 'D':
+                shift = -1
+            if action_res[0] == 1:
+                self.pred1_shift += shift
+            if action_res[0] == 2:
+                self.pred2_shift += shift
+
+            # Check if predecessors are out of boundaries after the shift
+            pred_oob = not NASEnvHelper.is_valid_pred_shift(
+                self.pred1_shift, self.pred2_shift, self.state
+            )
+        # Option b) The action was 'add layer', so we just change the state
+        else:
+            self.state = action_res
+
+        # 2. We always sort the state representation
         self.state = sort_sequence(self.state, as_list=False)
 
         # 3. We build the composed ID: dataset_name + hash_of_sequence
@@ -194,8 +219,8 @@ class DefaultNASEnv(gym.Env):
             h=compute_str_hash(state_to_string(self.state))
         )
 
-        # 4. Compute the reward: if it exists already in the DB, skip training,
-        #    otherwise proceed to training.
+        # 4. Compute the reward: if it exists already in the DB, skip
+        #    training, otherwise proceed to training.
         if self.db_manager.exists(composed_id):
             nas_logger.info(
                 "Skipping reward computation for architecture %s cause it \
@@ -245,18 +270,21 @@ already exists the DB of experiments", composed_id
                 }
             )
 
-        # 5. Increase the number of steps cause we are done with the action
+        # If the predecessors were out of boundaries, the reward is 0.
+        reward = 0 if pred_oob else reward
+
+        # A. Increase the number of steps cause we are done with the action
         self.step_count += 1
 
-        # 6. Verify whether or not we are done: if we reached the max number of
+        # B. Verify whether or not we are done: if we reached the max number of
         #    steps or if the action we performmed was a terminal action.
         #    Additionally, we consider 'dead' an invalid layer (cause the next
         #    ones will always be invalid too.)
         done = self.step_count == self.max_steps or \
             NASEnvHelper.is_terminal(action, self.actions_info) or not status \
-            or self.state[0, 0] != 0  # meaning all layers have been occupied
+            or self.state[0, 0] != 0 or pred_oob  # first 'or' means full
 
-        # 7. Build additional information we want to return (as in gym.Env)
+        # C. Build additional information we want to return (as in gym.Env)
         info_dict = {
             "step_count": self.step_count,
             "valid": status,
@@ -273,14 +301,18 @@ already exists the DB of experiments", composed_id
             "action_inferred": NASEnvHelper.infer_action_encoding(
                 action,
                 self.actions_info,
-                get_current_layer(bkp_original)
+                get_current_layer(bkp_original),
+                self.pred1_shift,
+                self.pred2_shift,
             ),
             "reward": reward,
             "done": done,
             "running_time": running_time,
+            "pred1_shift": self.pred1_shift,
+            "pred2_shift": self.pred2_shift, 
         }
 
-        # 8. Return the results as specified in gym.Env
+        # D. Return the results as specified in gym.Env
         return self.state, reward, done, info_dict
 
     def reset(self):
@@ -293,6 +325,10 @@ already exists the DB of experiments", composed_id
             dtype=np.int32
         )
         self.step_count = 0
+
+        # Two variables to shift the position of the predecessor
+        self.pred1_shift = 0
+        self.pred2_shift = 0
 
         return self.state
 
@@ -314,15 +350,21 @@ class NASEnvHelper:
     """Set of static methods that help the Default NAS environment."""
 
     @staticmethod
-    def perform_action(space, action, action_info):
+    def perform_action(space, action, action_info, shift1=0, shift2=0):
         """Perform an action in the environment's space."""
         # Always assert the action first
         target = space.copy()
         NASEnvHelper.assert_valid_action(action, action_info)
 
-        # Obtain the encoding
+        # Handle the case where the predecessor are altered
+        if NASEnvHelper.is_predecessor_action(action, action_info):
+            return NASEnvHelper.infer_action_predecessor_encoding(
+                action, action_info
+            )
+
+        # If it is not a predecessor action, obtain the encoding...
         encoding = NASEnvHelper.infer_action_encoding(
-            action, action_info, get_current_layer(space)
+            action, action_info, get_current_layer(space), shift1, shift2
         )
 
         nas_logger.debug(
@@ -356,17 +398,13 @@ class NASEnvHelper:
         return action_info[action].startswith("remove")
 
     @staticmethod
-    def infer_action_encoding(action, action_info, current_layer=0):
+    def infer_action_encoding(action, action_info, current_layer=0, shift1=0,
+                              shift2=0):
         """Obtain the encoding of an action, given its identifier in a dict."""
         NASEnvHelper.assert_valid_action(action, action_info)
 
         action_str = action_info[action]
         action_arr = action_str.split("_")
-
-        # Depending of the type of action...
-        if NASEnvHelper.is_remove_action(action, action_info):
-            # Return only the number of the layer to remove
-            return action_arr[1]
 
         # Otherwise ...
         layer_type = action_arr[0]
@@ -375,12 +413,13 @@ class NASEnvHelper:
         layer_pred2 = action_arr[3].split("-")[1]
 
         if layer_pred1 == "L":
-            layer_pred1 = current_layer
+            layer_pred1 = current_layer - shift1
         else:
             layer_pred1 = int(layer_pred1)
 
         if layer_pred2 == "BL":
-            layer_pred2 = 0 if not current_layer else current_layer - 1
+            layer_pred2 = 0 if not current_layer else current_layer - shift2
+            # layer_pred2 = 0 if not current_layer else current_layer - 1
         else:
             layer_pred2 = int(layer_pred2)
 
@@ -401,6 +440,21 @@ class NASEnvHelper:
             layer_type = LTYPE_TERMINAL
 
         return [layer_type, layer_kernel_size, layer_pred1, layer_pred2]
+
+    @staticmethod
+    def infer_action_predecessor_encoding(action, action_info):
+        """Obtain the encoding of an action, given its identifier in a dict."""
+        NASEnvHelper.assert_valid_action(action, action_info)
+
+        # predecessor_p-X_op-O
+        action_str = action_info[action]
+        action_arr = action_str.split("_")  # [predecessor, p-X, op-O]
+
+        # Otherwise ...
+        predecessor = int(action_arr[1])
+        operation = action_arr[2]
+
+        return (predecessor, operation)  # Return a tuple
 
     @staticmethod
     def reward(state, dataset_handler, log_path="./workspace"):
@@ -517,6 +571,15 @@ of type %s. Message is: %s", composed_id, type(ex), str(ex)
         return action_info[action].startswith("terminal")
 
     @staticmethod
+    def is_predecessor_action(action, action_info):
+        """Check if an action induces a terminal state."""
+        # Assert first
+        NASEnvHelper.assert_valid_action(action, action_info)
+
+        # Check if it is the terminal state
+        return action_info[action].startswith("predshift")
+
+    @staticmethod
     def assert_valid_action(action, action_info):
         """Whether or not the action is a valid one."""
         try:
@@ -527,3 +590,15 @@ of type %s. Message is: %s", composed_id, type(ex), str(ex)
                     dict=action_info
                 )
             )
+
+    @staticmethod
+    def is_valid_pred_shift(shift1, shift2, state):
+        """Test if a shift is valid, given the current state."""
+        n_layers = state.shape[0]
+        current_layer = state[n_layers - 1][0]
+
+        shifted1 = current_layer + shift1
+        shifted2 = current_layer + shift2
+
+        return (shifted1 < 0 or shifted1 > current_layer) or \
+               (shifted2 < 0 or shifted2 > current_layer)
