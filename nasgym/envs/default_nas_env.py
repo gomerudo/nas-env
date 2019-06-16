@@ -451,8 +451,8 @@ class NASEnvHelper:
         action_arr = action_str.split("_")  # [predecessor, p-X, op-O]
 
         # Otherwise ...
-        predecessor = int(action_arr[1])
-        operation = action_arr[2]
+        predecessor = int(action_arr[1].split("-")[1])
+        operation = action_arr[2].split("-")[1]
 
         return (predecessor, operation)  # Return a tuple
 
