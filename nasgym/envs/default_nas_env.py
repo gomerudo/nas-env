@@ -284,6 +284,18 @@ already exists the DB of experiments", composed_id
             NASEnvHelper.is_terminal(action, self.actions_info) or not status \
             or self.state[0, 0] != 0 or pred_oob  # first 'or' means full
 
+        if NASEnvHelper.is_predecessor_action(action, self.actions_info):
+            inferred = NASEnvHelper.infer_action_predecessor_encoding(
+                action, self.actions_info
+            )
+        else:
+            inferred = NASEnvHelper.infer_action_encoding(
+                action,
+                self.actions_info,
+                get_current_layer(bkp_original),
+                self.pred1_shift,
+                self.pred2_shift,
+            )
         # C. Build additional information we want to return (as in gym.Env)
         info_dict = {
             "step_count": self.step_count,
@@ -298,13 +310,7 @@ already exists the DB of experiments", composed_id
                 state_to_string(self.state)
             ),
             "action_id": action,
-            "action_inferred": NASEnvHelper.infer_action_encoding(
-                action,
-                self.actions_info,
-                get_current_layer(bkp_original),
-                self.pred1_shift,
-                self.pred2_shift,
-            ),
+            "action_inferred": inferred,
             "reward": reward,
             "done": done,
             "running_time": running_time,
