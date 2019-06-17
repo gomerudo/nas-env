@@ -125,7 +125,7 @@ class DefaultNASEnv(gym.Env):
 
         # The log_path
         try:
-            self.log_path = CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_LOGPATH]
+            self.log_path = CONFIG_INI[cr.SEC_DEFAULT][cr.PROP_LOGPATH]
         except KeyError:
             self.log_path = log_path
 
