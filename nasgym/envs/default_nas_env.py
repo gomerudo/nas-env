@@ -606,5 +606,5 @@ of type %s. Message is: %s", composed_id, type(ex), str(ex)
         shifted1 = current_layer + shift1
         shifted2 = current_layer + shift2
 
-        return (shifted1 < 0 or shifted1 > current_layer) or \
-               (shifted2 < 0 or shifted2 > current_layer)
+        return (shifted1 >= 0 and shifted1 <= current_layer) and \
+               (shifted2 >= 0 and shifted2 <= current_layer)
