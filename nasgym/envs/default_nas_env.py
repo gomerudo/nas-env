@@ -558,6 +558,10 @@ attributes are:", type(nas_trainer)
             reward = accuracy*100 - nas_trainer.weighted_log_density - \
                 nas_trainer.weighted_log_flops
 
+            # Make sure that reward is not too penalized (e.g. meta-dataset)
+            if reward < 0.01:
+                reward = accuracy
+
             return reward, accuracy, nas_trainer.density, nas_trainer.flops, \
                 True
         except Exception as ex:  # pylint: disable=broad-except

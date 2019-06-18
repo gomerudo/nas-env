@@ -5,7 +5,9 @@ import math
 from abc import ABC, abstractmethod
 import tensorflow as tf
 from tensorflow.python.client import device_lib
+import nasgym.utl.configreader as cr
 from nasgym import nas_logger
+from nasgym import CONFIG_INI
 from nasgym.net_ops.net_builder import sequence_to_net
 from nasgym.net_ops.net_utils import compute_network_density
 from nasgym.net_ops.net_utils import compute_network_flops
@@ -81,29 +83,49 @@ class DefaultNASTrainer(NasEnvTrainerBase):
 evaluation"
         )
         if self.classifier is None:
-            # Set distributed strategy
-            # TODO: Improve handling of environment variables
-            if os.environ.get('TF_ENABLE_DISTRIBUTED_STRATEGY') is not None:
-                nas_logger.info(
-                    "Distributed strategy has been indicated. Obtaining the \
-number of replicas available."
+            # Read the configuration for the distributed strategy (config.ini)
+            try:
+                aux = CONFIG_INI[cr.SEC_TRAINER_TENSORFLOW]
+                self._distributed_enabled = aux[cr.PROP_ENABLE_DISTRIBUTED]
+            except KeyError:
+                self._distributed_enabled = False
+
+            # Read the configuration for the log device placement (config.ini)
+            try:
+                aux = CONFIG_INI[cr.SEC_TRAINER_TENSORFLOW]
+                self._devplacement_enabled = \
+                    aux[cr.PROP_ENABLE_DEVICEPLACEMENT]
+            except KeyError:
+                self._devplacement_enabled = False
+
+            # Read the configuration for the memory growth (config.ini)
+            try:
+                aux = CONFIG_INI[cr.SEC_TRAINER_TENSORFLOW]
+                allow_memory_growth = aux[cr.PROP_ALLOW_MEMORYGROWTH]
+            except KeyError:
+                allow_memory_growth = False
+
+            # Actually evaluation if distributed strategy is enabled
+            if self._distributed_enabled:
+                nas_logger.info("Distributed strategy has been enabled")
+                # Obtain the available GPUs
+                local_device = device_lib.list_local_devices()
+                gpu_devices = \
+                    [x.name for x in local_device if x.device_type == 'GPU']
+                self.distributed_nreplicas = len(gpu_devices)
+
+                distributed_strategy = tf.contrib.distribute.MirroredStrategy(
+                    num_gpus=self.distributed_nreplicas
                 )
-                local_device_protos = device_lib.list_local_devices()
-                self.distributed_nreplicas = \
-                    len([x.name for x in local_device_protos if x.device_type == 'GPU'])
-                distributed_strategy = \
-                    tf.contrib.distribute.MirroredStrategy(
-                        num_gpus=self.distributed_nreplicas
-                    )
                 nas_logger.info(
-                    "Number of replicas to be used is %d",
-                    self.distributed_nreplicas
+                    "Number of replicas: %d", self.distributed_nreplicas
                 )
             else:
                 distributed_strategy = None
                 self.distributed_nreplicas = 1
 
-            if os.environ.get('TF_ENABLE_LOG_DEVICE_PLACEMENT') is not None:
+            # Evaluating if log device placement
+            if self._devplacement_enabled:
                 nas_logger.debug(
                     "Distributed strategy has been indicated. Obtaining the \
 number of replicas available."
@@ -111,8 +133,13 @@ number of replicas available."
                 sess_config = tf.ConfigProto(log_device_placement=True)
             else:
                 sess_config = tf.ConfigProto()
+
             # pylint: disable=no-member
-            sess_config.gpu_options.allow_growth = True
+            if allow_memory_growth:
+                nas_logger.debug(
+                    "Dynamic memory growth for TensorFlow is enabled"
+                )
+                sess_config.gpu_options.allow_growth = True
 
             # pylint: disable=no-member
             run_config = tf.estimator.RunConfig(
@@ -265,25 +292,19 @@ number of replicas available."
               n_epochs=12):
         """Train the self-network with the the given training configuration."""
         if isinstance(train_input_fn, str):
-            if os.environ.get('TF_ENABLE_DISTRIBUTED_STRATEGY') is not None:
-                nas_logger.debug("Distributed strategy has been indicated. \
-Using custom input function for training.")
-                raise NotImplementedError("Distributed strategy not supported")
+            if train_input_fn == "default":
+                # pylint: disable=no-member
+                train_input_fn = tf.estimator.inputs.numpy_input_fn(
+                    x={"x": train_data},
+                    y=train_labels,
+                    batch_size=self.batch_size,
+                    num_epochs=None,
+                    shuffle=True
+                )
             else:
-                if train_input_fn in ["default"]:
-                    if train_input_fn == "default":
-                        # pylint: disable=no-member
-                        train_input_fn = tf.estimator.inputs.numpy_input_fn(
-                            x={"x": train_data},
-                            y=train_labels,
-                            batch_size=self.batch_size,
-                            num_epochs=None,
-                            shuffle=True
-                        )
-                else:
-                    raise ValueError(
-                        "train_input_fn has been specified as string, but no valid\
-value has been provided. Options are: 'default'"
+                raise ValueError(
+                        "train_input_fn has been specified as string, but no \
+valid value has been provided. Options are: 'default'"
                     )
 
         # hooks = [
@@ -310,20 +331,16 @@ value has been provided. Options are: 'default'"
         # Validations:
         # If it is of type str, make sure is a valid
         if isinstance(eval_input_fn, str):
-            if os.environ.get('TF_ENABLE_DISTRIBUTED_STRATEGY') is not None:
-                nas_logger.debug("Distributed strategy has been indicated. \
-Using custom input function for evaluation.")
-                raise NotImplementedError("Distributed strategy not supported")
-            else:
-                if eval_input_fn == "default":
-                    # pylint: disable=no-member
-                    eval_input_fn = tf.estimator.inputs.numpy_input_fn(
-                        x={"x": eval_data},
-                        y=eval_labels,
-                        num_epochs=1,
-                        # batch_size=self.batch_size,
-                        shuffle=False
-                    )
+            if eval_input_fn == "default":
+                # pylint: disable=no-member
+                eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+                    x={"x": eval_data},
+                    y=eval_labels,
+                    num_epochs=1,
+                    # batch_size=self.batch_size,
+                    shuffle=False
+                )
+
         nas_logger.debug("Running tensorflow evaluation")
         eval_res = self.classifier.evaluate(input_fn=eval_input_fn)
         nas_logger.debug("TensorFlow evaluation finished")
