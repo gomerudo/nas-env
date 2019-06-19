@@ -303,9 +303,9 @@ number of replicas available."
                 )
             else:
                 raise ValueError(
-                        "train_input_fn has been specified as string, but no \
+                    "train_input_fn has been specified as string, but no \
 valid value has been provided. Options are: 'default'"
-                    )
+                )
 
         # hooks = [
         #     tf.train.ProfilerHook(

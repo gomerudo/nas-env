@@ -49,7 +49,8 @@ def parser(record_dataset):
 
 
 def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
-                         is_train=True, split_prop=0.33, random_seed=32):
+                         is_train=True, split_prop=0.33, random_seed=32,
+                         is_distributed=False):
     """Input function for a tensorflow estimator."""
     # 1. Compute the length of the train-validation split
     trainset_length = math.floor(data_length*split_prop)
@@ -74,6 +75,9 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
         .shuffle(buffer_size=trainset_length)
         .batch(batch_size=batch_size)
     )
+
+    if is_distributed:
+        return dataset
 
     # 5. Create a simple iterator
     iterator = dataset.make_one_shot_iterator()
@@ -129,24 +133,38 @@ class MetaDatasetHandler(AbstractDatasetHandler):
 
     def current_train_set(self):
         """Return the current train set as an input_fn."""
+        try:
+            aux = CONFIG_INI[cr.SEC_TRAINER_TENSORFLOW]
+            distributed = aux[cr.PROP_ENABLE_DISTRIBUTED]
+        except KeyError:
+            distributed = False
+
         return metadataset_input_fn(
             tfrecord_data=self._current_tfrecord_dataset,
             data_length=n_elements(self._current_tfrecords_files),
             batch_size=self.batch_size,
             is_train=True,
             split_prop=self.split_prop,
-            random_seed=self.random_seed
+            random_seed=self.random_seed,
+            is_distributed=distributed
         )
 
     def current_validation_set(self):
         """Return the current validation set as an input_fn."""
+        try:
+            aux = CONFIG_INI[cr.SEC_TRAINER_TENSORFLOW]
+            distributed = aux[cr.PROP_ENABLE_DISTRIBUTED]
+        except KeyError:
+            distributed = False
+
         return metadataset_input_fn(
             tfrecord_data=self._current_tfrecord_dataset,
             data_length=n_elements(self._current_tfrecords_files),
             batch_size=self.batch_size,
             is_train=False,
             split_prop=self.split_prop,
-            random_seed=self.random_seed
+            random_seed=self.random_seed,
+            is_distributed=distributed
         )
 
     def current_dataset_name(self):
