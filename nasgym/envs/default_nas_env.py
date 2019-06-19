@@ -560,7 +560,7 @@ attributes are:", type(nas_trainer)
 
             # Make sure that reward is not too penalized (e.g. meta-dataset)
             if reward < 0.01:
-                reward = accuracy
+                reward = accuracy*100
 
             return reward, accuracy, nas_trainer.density, nas_trainer.flops, \
                 True
