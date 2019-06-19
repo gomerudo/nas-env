@@ -499,8 +499,8 @@ attributes are:", type(nas_trainer)
             nas_logger.debug("  input_shape: %s", nas_trainer.input_shape)
             nas_logger.debug("  batch_size: %s", nas_trainer.batch_size)
             nas_logger.debug("  log_path: %s", nas_trainer.log_path)
-            nas_logger.debug("  mu: %s", nas_trainer.mu)
-            nas_logger.debug("  rho: %s", nas_trainer.rho)
+            # nas_logger.debug("  mu: %s", nas_trainer.mu)
+            # nas_logger.debug("  rho: %s", nas_trainer.rho)
             nas_logger.debug(
                 "  variable_scope: %s", nas_trainer.variable_scope
             )
