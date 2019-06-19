@@ -53,11 +53,13 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
                          is_distributed=False):
     """Input function for a tensorflow estimator."""
     # 1. Compute the length of the train-validation split
+    
     trainset_length = math.floor(data_length*split_prop)
 
     # 2. Shuffle the records to perform thes split. We make this first shuffle
     #    using a random_seed to allow for reproducibility of the split.
-    dataset = tfrecord_data.shuffle(buffer_size=data_length, seed=random_seed)
+    dataset = tf.data.TFRecordDataset(tfrecord_data)
+    dataset = dataset.shuffle(buffer_size=data_length, seed=random_seed)
 
     # 3. Decide if we use the train set of the test set
     if is_train:
@@ -140,7 +142,7 @@ class MetaDatasetHandler(AbstractDatasetHandler):
             distributed = False
 
         return metadataset_input_fn(
-            tfrecord_data=self._current_tfrecord_dataset,
+            tfrecord_data=self._current_tfrecords_files,
             data_length=n_elements(self._current_tfrecords_files),
             batch_size=self.batch_size,
             is_train=True,
@@ -158,7 +160,7 @@ class MetaDatasetHandler(AbstractDatasetHandler):
             distributed = False
 
         return metadataset_input_fn(
-            tfrecord_data=self._current_tfrecord_dataset,
+            tfrecord_data=self._current_tfrecords_files,
             data_length=n_elements(self._current_tfrecords_files),
             batch_size=self.batch_size,
             is_train=False,
@@ -226,7 +228,7 @@ class MetaDatasetHandler(AbstractDatasetHandler):
         )
 
         # 2. Read the tfrecords and build the TFRecordDataset object
-        self._current_tfrecord_dataset = tf.data.TFRecordDataset(
-            self._current_tfrecords_files
-        )
+        # self._current_tfrecord_dataset = tf.data.TFRecordDataset(
+        #     self._current_tfrecords_files
+        # )
         self._current_datalength = n_elements(self._current_tfrecords_files)
