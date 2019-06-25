@@ -86,7 +86,7 @@ build this network."
                 # )(tf_layers[layer_pred1])
 
                 conv_layer = tf.keras.layers.Conv2D(
-                    filters=64,
+                    filters=32,
                     kernel_size=(layer_kernel_size, layer_kernel_size),
                     padding="same",
                     name="Conv"
