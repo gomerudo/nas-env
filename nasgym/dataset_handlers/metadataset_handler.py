@@ -3,6 +3,7 @@
 import math
 import glob
 import tensorflow as tf
+from nasgym import nas_logger as logger
 from nasgym.dataset_handlers.default_handler import AbstractDatasetHandler
 from nasgym import CONFIG_INI
 from nasgym.utl import configreader as cr
@@ -53,7 +54,6 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
                          is_distributed=False):
     """Input function for a tensorflow estimator."""
     # 1. Compute the length of the train-validation split
-    
     trainset_length = math.floor(data_length*split_prop)
 
     # 2. Shuffle the records to perform thes split. We make this first shuffle
@@ -126,7 +126,16 @@ class MetaDatasetHandler(AbstractDatasetHandler):
         ]
 
         # We always start with the first element in the list
-        self.set_current_dataset(self._datasets_list[0])
+
+        try:
+            self.set_current_dataset_from_config()
+            logger.debug("Current dataset for MetaDatasetHandler has been set \
+from configuration file. Current dataset is: %s", self.current_dataset_name())
+        except KeyError:
+            logger.debug("Dataset could not been set from configuration file. \
+Using default dataset: %s", self._datasets_list[0])
+            self.set_current_dataset(self._datasets_list[0])
+
         super(MetaDatasetHandler, self).__init__(name=name)
 
     def n_datasets(self):
@@ -232,3 +241,4 @@ class MetaDatasetHandler(AbstractDatasetHandler):
         #     self._current_tfrecords_files
         # )
         self._current_datalength = n_elements(self._current_tfrecords_files)
+        logger.debug("Current dataset length is: %d", self._current_datalength)

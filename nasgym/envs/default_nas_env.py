@@ -32,6 +32,7 @@ from nasgym.net_ops.net_builder import LTYPE_IDENTITY
 from nasgym.net_ops.net_builder import LTYPE_MAXPOOLING
 from nasgym.net_ops.net_builder import LTYPE_TERMINAL
 from nasgym.net_ops.net_trainer import DefaultNASTrainer
+from nasgym.net_ops.net_trainer import EarlyStopNASTrainer
 from nasgym.net_ops.net_utils import sort_sequence
 from nasgym.utl.miscellaneous import compute_str_hash
 from nasgym.utl.miscellaneous import get_current_timestamp
@@ -555,15 +556,15 @@ attributes are:", type(nas_trainer)
             )
 
             accuracy = res['accuracy']
-            if isinstance(nas_trainer, DefaultNASTrainer):
-                reward = accuracy*100
-                return reward, accuracy, 0., 0., True
-            else:
+            if isinstance(nas_trainer, EarlyStopNASTrainer):
                 # Compute the refined reward as defined
                 reward = accuracy*100 - nas_trainer.weighted_log_density - \
                     nas_trainer.weighted_log_flops
                 return reward, accuracy, nas_trainer.density, \
                     nas_trainer.flops, True
+            elif isinstance(nas_trainer, DefaultNASTrainer):
+                reward = accuracy*100
+                return reward, accuracy, 0., 0., True
         except Exception as ex:  # pylint: disable=broad-except
             nas_logger.info(
                 "Reward computation of architecture %s failed with exception \
