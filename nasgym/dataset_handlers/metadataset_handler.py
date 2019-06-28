@@ -77,17 +77,17 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
     dataset = dataset.shuffle(trainset_length)
     dataset = dataset.batch(batch_size)
 
-    if is_distributed:
-        return dataset
+    # if is_distributed:
+    return dataset
 
-    # 5. Create a simple iterator
-    iterator = dataset.make_one_shot_iterator()
+    # # 5. Create a simple iterator
+    # iterator = dataset.make_one_shot_iterator()
 
-    # 6. Obtain the batch
-    batch_feats, batch_labels = iterator.get_next()
+    # # 6. Obtain the batch
+    # batch_feats, batch_labels = iterator.get_next()
 
-    # Return the batch of (features, labels)
-    return batch_feats, batch_labels
+    # # Return the batch of (features, labels)
+    # return batch_feats, batch_labels
 
 
 class MetaDatasetHandler(AbstractDatasetHandler):
