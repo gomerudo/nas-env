@@ -75,6 +75,7 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
     #       4.3 Create batches of size batch_size
     dataset = dataset.map(parser)
     dataset = dataset.shuffle(trainset_length)
+    dataset = dataset.repeat()
     dataset = dataset.batch(batch_size)
 
     # if is_distributed:
