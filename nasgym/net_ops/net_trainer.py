@@ -380,7 +380,6 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
         # Define the model_fn we want to return
         def model_fn(features, labels, mode):
             with tf.variable_scope(self.variable_scope):
-                # print("Shape of features is:", features["x"].get_shape().dims)
                 # 1. Define the input placeholder
                 if len(self.input_shape) == 2:  # Reshape if necessary
                     new_shape = [-1] + list(self.input_shape) + [1]

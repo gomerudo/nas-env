@@ -53,13 +53,15 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
                          is_train=True, split_prop=0.33, random_seed=32,
                          is_distributed=False):
     """Input function for a tensorflow estimator."""
+    # 0. Read the data from the TFRecords
+    dataset = tf.data.TFRecordDataset(tfrecord_data)
+
     # 1. Compute the length of the train-validation split
-    trainset_length = math.floor(data_length*split_prop)
+    trainset_length = math.floor(data_length*(1. - split_prop))
 
     # 2. Shuffle the records to perform thes split. We make this first shuffle
     #    using a random_seed to allow for reproducibility of the split.
-    dataset = tf.data.TFRecordDataset(tfrecord_data)
-    dataset = dataset.shuffle(buffer_size=data_length, seed=random_seed)
+    dataset = dataset.shuffle(data_length, seed=random_seed)
 
     # 3. Decide if we use the train set of the test set
     if is_train:
@@ -71,12 +73,9 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
     #       4.1 Apply the parsing
     #       4.2 Shuffle the final dataset
     #       4.3 Create batches of size batch_size
-    dataset = (
-        dataset
-        .map(map_func=parser)
-        .shuffle(buffer_size=trainset_length)
-        .batch(batch_size=batch_size)
-    )
+    dataset = dataset.map(parser)
+    dataset = dataset.shuffle(trainset_length)
+    dataset = dataset.batch(batch_size)
 
     if is_distributed:
         return dataset
@@ -152,7 +151,7 @@ Using default dataset: %s", self._datasets_list[0])
 
         return metadataset_input_fn(
             tfrecord_data=self._current_tfrecords_files,
-            data_length=n_elements(self._current_tfrecords_files),
+            data_length=self._current_datalength,
             batch_size=self.batch_size,
             is_train=True,
             split_prop=self.split_prop,
@@ -170,7 +169,7 @@ Using default dataset: %s", self._datasets_list[0])
 
         return metadataset_input_fn(
             tfrecord_data=self._current_tfrecords_files,
-            data_length=n_elements(self._current_tfrecords_files),
+            data_length=self._current_datalength,
             batch_size=self.batch_size,
             is_train=False,
             split_prop=self.split_prop,
@@ -204,6 +203,7 @@ Using default dataset: %s", self._datasets_list[0])
 
         # Make the switch
         self._current_dataset = self._datasets_list[next_idx]
+        self._recompute_variables()
 
     def set_current_dataset_from_config(self):
         """Assign a dataset to work with from initial config.ini."""
