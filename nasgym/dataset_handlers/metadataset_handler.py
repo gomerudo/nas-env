@@ -83,7 +83,10 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
 
     # shuffle and repeat examples for better randomness and allow training
     # beyond one epoch
-    dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(current_length))
+    count_repeat = None if is_train else 1
+    dataset = dataset.apply(
+        tf.contrib.data.shuffle_and_repeat(current_length, count_repeat)
+    )
 
     # map the parse function to each example individually in threads*2
     # parallel calls
@@ -93,7 +96,7 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
     # batch the examples
     dataset = dataset.batch(batch_size=batch_size)
 
-    #prefetch batch
+    # prefetch batch
     dataset = dataset.prefetch(buffer_size=32)
 
     return dataset.make_one_shot_iterator().get_next()
