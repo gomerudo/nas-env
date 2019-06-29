@@ -2,6 +2,7 @@
 
 import math
 import glob
+import multiprocessing
 import tensorflow as tf
 from nasgym import nas_logger as logger
 from nasgym.dataset_handlers.default_handler import AbstractDatasetHandler
@@ -53,33 +54,77 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
                          is_train=True, split_prop=0.33, random_seed=32,
                          is_distributed=False):
     """Input function for a tensorflow estimator."""
-    # 0. Read the data from the TFRecords
-    dataset = tf.data.TFRecordDataset(tfrecord_data)
-
-    # 1. Compute the length of the train-validation split
+    # pattern = "{rd}/{id}/*.tfrecords".format(
+    #     rd=self.tfrecords_rootdir,
+    #     id=self.current_dataset_name()
+    # )
     trainset_length = math.floor(data_length*(1. - split_prop))
 
-    # 2. Shuffle the records to perform thes split. We make this first shuffle
-    #    using a random_seed to allow for reproducibility of the split.
-    dataset = dataset.shuffle(data_length, seed=random_seed)
+    files = tf.data.Dataset.list_files(
+        tfrecord_data, shuffle=is_train, seed=random_seed
+    )
+    n_threads = multiprocessing.cpu_count()
+    logger.debug(
+        "Number of threads available for dataset processing is %d", n_threads
+    )
+    dataset = files.apply(
+        tf.contrib.data.parallel_interleave(
+            lambda filename: tf.data.TFRecordDataset(filename),
+            cycle_length=n_threads
+        )
+    )
 
-    # 3. Decide if we use the train set of the test set
     if is_train:
         dataset = dataset.take(trainset_length)
+        current_length = trainset_length
     else:
         dataset = dataset.skip(trainset_length)
+        current_length = data_length - trainset_length
 
-    # 4. Perform the data transormations:
-    #       4.1 Apply the parsing
-    #       4.2 Shuffle the final dataset
-    #       4.3 Create batches of size batch_size
-    dataset = dataset.map(parser)
-    dataset = dataset.shuffle(trainset_length)
-    dataset = dataset.repeat()
-    dataset = dataset.batch(batch_size)
+    # shuffle and repeat examples for better randomness and allow training
+    # beyond one epoch
+    dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(current_length))
 
-    # if is_distributed:
-    return dataset
+    # map the parse function to each example individually in threads*2
+    # parallel calls
+    dataset = dataset.map(map_func=lambda example: parser(example),
+                          num_parallel_calls=n_threads)
+
+    # batch the examples
+    dataset = dataset.batch(batch_size=batch_size)
+
+    #prefetch batch
+    dataset = dataset.prefetch(buffer_size=32)
+
+    return dataset.make_one_shot_iterator().get_next()
+
+    # # 0. Read the data from the TFRecords
+    # dataset = tf.data.TFRecordDataset(tfrecord_data)
+
+    # # 1. Compute the length of the train-validation split
+    # trainset_length = math.floor(data_length*(1. - split_prop))
+
+    # # 2. Shuffle the records to perform thes split. We make this first shuffle
+    # #    using a random_seed to allow for reproducibility of the split.
+    # dataset = dataset.shuffle(data_length, seed=random_seed)
+
+    # # 3. Decide if we use the train set of the test set
+    # if is_train:
+    #     dataset = dataset.take(trainset_length)
+    # else:
+    #     dataset = dataset.skip(trainset_length)
+
+    # # 4. Perform the data transormations:
+    # #       4.1 Apply the parsing
+    # #       4.2 Shuffle the final dataset
+    # #       4.3 Create batches of size batch_size
+    # dataset = dataset.map(parser)
+    # dataset = dataset.shuffle(trainset_length)
+    # # dataset = dataset.repeat()
+    # dataset = dataset.batch(batch_size)
+
+    # # if is_distributed:
+    # # return dataset
 
     # # 5. Create a simple iterator
     # iterator = dataset.make_one_shot_iterator()
@@ -151,7 +196,7 @@ Using default dataset: %s", self._datasets_list[0])
             distributed = False
 
         return metadataset_input_fn(
-            tfrecord_data=self._current_tfrecords_files,
+            tfrecord_data=self._current_files_pattern,
             data_length=self._current_datalength,
             batch_size=self.batch_size,
             is_train=True,
@@ -169,7 +214,7 @@ Using default dataset: %s", self._datasets_list[0])
             distributed = False
 
         return metadataset_input_fn(
-            tfrecord_data=self._current_tfrecords_files,
+            tfrecord_data=self._current_files_pattern,
             data_length=self._current_datalength,
             batch_size=self.batch_size,
             is_train=False,
@@ -228,13 +273,13 @@ Using default dataset: %s", self._datasets_list[0])
 
     def _recompute_variables(self):
         # 1. List the relevant tfrecords files
+        self._current_files_pattern = "{rd}/{id}/*.tfrecords".format(
+            rd=self.tfrecords_rootdir,
+            id=self.current_dataset_name()
+        )
+
         self._current_tfrecords_files = sorted(
-            glob.glob(
-                "{rd}/{id}/*.tfrecords".format(
-                    rd=self.tfrecords_rootdir,
-                    id=self.current_dataset_name()
-                )
-            )
+            glob.glob(self._current_files_pattern)
         )
 
         # 2. Read the tfrecords and build the TFRecordDataset object
