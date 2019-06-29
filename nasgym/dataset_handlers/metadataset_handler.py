@@ -73,7 +73,8 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
             cycle_length=n_threads
         )
     )
-
+    dataset = dataset.shuffle(data_length)
+    
     if is_train:
         dataset = dataset.take(trainset_length)
         current_length = trainset_length
@@ -108,6 +109,7 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
             map_func=lambda example: parser(example),
             num_parallel_calls=n_threads
         )
+        dataset = dataset.repeat(1)
         dataset.prefetch(buffer_size=32)
         return dataset
 
