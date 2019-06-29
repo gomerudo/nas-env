@@ -74,7 +74,7 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
         )
     )
     dataset = dataset.shuffle(data_length)
-    
+
     if is_train:
         dataset = dataset.take(trainset_length)
         current_length = trainset_length
@@ -109,9 +109,9 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
             map_func=lambda example: parser(example),
             num_parallel_calls=n_threads
         )
-        dataset = dataset.repeat(1)
+        # dataset = dataset.batch(batch_size=batch_size)
         dataset.prefetch(buffer_size=32)
-        return dataset
+        return dataset.make_one_shot_iterator().get_next()
 
     # # 0. Read the data from the TFRecords
     # dataset = tf.data.TFRecordDataset(tfrecord_data)
