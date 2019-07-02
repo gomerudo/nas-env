@@ -19,7 +19,11 @@ def compute_network_density(graph, collection_name):
             edges_counter += len(node.input)
 
     # Note that we do not check for zero-division: on purpose to force failure.
-    return edges_counter/nodes_counter
+    try:
+        res = edges_counter/nodes_counter
+    except ZeroDivisionError:
+        res = 0
+    return res
 
 
 def compute_network_flops(graph, collection_name, logdir="workspace"):

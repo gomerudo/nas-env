@@ -522,9 +522,15 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
     @property
     def weighted_log_density(self):
         """Return the weighted version of the logarithm of the density."""
-        return self.rho*math.log(self.density)
-
+        try:
+            return self.rho*math.log(self.density)
+        except ValueError:
+            return 0
+        
     @property
     def weighted_log_flops(self):
         """Return the weighted version of the logarithm of the FLOPs."""
-        return self.mu*math.log(self.flops)
+        try:
+            return self.mu*math.log(self.flops)
+        except ValueError:
+            return 0
