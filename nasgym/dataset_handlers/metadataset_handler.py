@@ -102,45 +102,10 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
     # prefetch batch
     dataset = dataset.prefetch(buffer_size=32)
 
+    if is_distributed:
+        return dataset
+
     return dataset.make_one_shot_iterator().get_next()
-
-
-    # # 0. Read the data from the TFRecords
-    # dataset = tf.data.TFRecordDataset(tfrecord_data)
-
-    # # 1. Compute the length of the train-validation split
-    # trainset_length = math.floor(data_length*(1. - split_prop))
-
-    # # 2. Shuffle the records to perform thes split. We make this first shuffle
-    # #    using a random_seed to allow for reproducibility of the split.
-    # dataset = dataset.shuffle(data_length, seed=random_seed)
-
-    # # 3. Decide if we use the train set of the test set
-    # if is_train:
-    #     dataset = dataset.take(trainset_length)
-    # else:
-    #     dataset = dataset.skip(trainset_length)
-
-    # # 4. Perform the data transormations:
-    # #       4.1 Apply the parsing
-    # #       4.2 Shuffle the final dataset
-    # #       4.3 Create batches of size batch_size
-    # dataset = dataset.map(parser)
-    # dataset = dataset.shuffle(trainset_length)
-    # # dataset = dataset.repeat()
-    # dataset = dataset.batch(batch_size)
-
-    # # if is_distributed:
-    # # return dataset
-
-    # # 5. Create a simple iterator
-    # iterator = dataset.make_one_shot_iterator()
-
-    # # 6. Obtain the batch
-    # batch_feats, batch_labels = iterator.get_next()
-
-    # # Return the batch of (features, labels)
-    # return batch_feats, batch_labels
 
 
 class MetaDatasetHandler(AbstractDatasetHandler):
