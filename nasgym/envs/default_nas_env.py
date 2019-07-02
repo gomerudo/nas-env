@@ -290,6 +290,7 @@ already exists the DB of experiments", composed_id
             inferred = NASEnvHelper.infer_action_predecessor_encoding(
                 action, self.actions_info
             )
+            reward = reward*0.15
         else:
             inferred = NASEnvHelper.infer_action_encoding(
                 action,
@@ -298,6 +299,7 @@ already exists the DB of experiments", composed_id
                 self.pred1_shift,
                 self.pred2_shift,
             )
+
         # C. Build additional information we want to return (as in gym.Env)
         info_dict = {
             "step_count": self.step_count,
