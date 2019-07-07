@@ -89,6 +89,8 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
         tf.contrib.data.shuffle_and_repeat(current_length, count_repeat)
     )
 
+    logger.debug("Current length in input_fn %d", current_length)
+
     # map the parse function to each example individually in threads*2
     # parallel calls
     dataset = dataset.map(
@@ -100,12 +102,13 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
     dataset = dataset.batch(batch_size=batch_size)
 
     # prefetch batch
-    dataset = dataset.prefetch(buffer_size=32)
+    # dataset = dataset.prefetch(buffer_size=32)
 
     if is_distributed:
         return dataset
 
-    return dataset.make_one_shot_iterator().get_next()
+    iterator = dataset.make_one_shot_iterator()
+    return iterator.get_next()
 
 
 class MetaDatasetHandler(AbstractDatasetHandler):
@@ -124,7 +127,6 @@ class MetaDatasetHandler(AbstractDatasetHandler):
             "cu_birds",
             "dtd",
             "fungi",
-            # "ilsvrc_2012"
             "omniglot",
             "quickdraw",
             "traffic_sign",
@@ -153,6 +155,8 @@ from configuration file. Current dataset is: %s", self.current_dataset_name())
 Using default dataset: %s", self._datasets_list[0])
             self.set_current_dataset(self._datasets_list[0])
 
+        logger.debug("Current nclasses %d", self.current_n_classes())
+        logger.debug("Current nobservations %d", self.current_n_observations())
         super(MetaDatasetHandler, self).__init__(name=name)
 
     def n_datasets(self):
@@ -187,7 +191,7 @@ Using default dataset: %s", self._datasets_list[0])
 
         return metadataset_input_fn(
             tfrecord_data=self._current_files_pattern,
-            data_length=self._current_datalength,
+            data_length=self.current_n_observations(),
             batch_size=self.batch_size,
             is_train=False,
             split_prop=self.split_prop,
