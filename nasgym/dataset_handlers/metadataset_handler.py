@@ -102,7 +102,7 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
     dataset = dataset.batch(batch_size=batch_size)
 
     # prefetch batch
-    # dataset = dataset.prefetch(buffer_size=32)
+    dataset = dataset.prefetch(buffer_size=32)
 
     if is_distributed:
         return dataset
