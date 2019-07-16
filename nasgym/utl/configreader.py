@@ -22,6 +22,7 @@ PROP_DBFILE = "DbFile"
 PROP_ACTION_SPACE_TYPE = "ActionSpaceType"
 PROP_DATASET_HANDLER = "DatasetHandler"
 PROP_TRAINER_TYPE = "TrainerType"
+PROP_POINT_DISC = "PointersRewardDiscount"
 
 # Trainer Default
 PROP_BATCHSIZE = "BatchSize"
@@ -133,6 +134,15 @@ def read_configfile():
                 config,
                 res,
                 None
+            )
+
+        if PROP_POINT_DISC in config[SEC_NASENV_DEFAULT]:
+            _set_property(
+                SEC_NASENV_DEFAULT,
+                PROP_POINT_DISC,
+                config,
+                res,
+                float
             )
 
     # SECTION 3: Default trainer

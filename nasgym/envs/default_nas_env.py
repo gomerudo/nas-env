@@ -62,7 +62,8 @@ class DefaultNASEnv(gym.Env):
             db_file=db_file,
             config_file=config_file,
             action_space_type=action_space_type,
-            dataset_handler=dataset_handler
+            dataset_handler=dataset_handler,
+            pointers_discount=0.5
         )
 
         # 2. Instanciate the database of experiments and its columns. Note that
@@ -119,7 +120,7 @@ class DefaultNASEnv(gym.Env):
 
     def _read_params_from_config(self, max_steps, log_path, db_file,
                                  config_file, action_space_type,
-                                 dataset_handler):
+                                 dataset_handler, pointers_discount):
         # The max_steps
         try:
             self.max_steps = \
@@ -159,6 +160,13 @@ class DefaultNASEnv(gym.Env):
                 CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_DATASET_HANDLER]
         except KeyError:
             self.dataset_handler = dataset_handler
+
+        # The reward discount
+        try:
+            self.pointers_discount = \
+                CONFIG_INI[cr.SEC_NASENV_DEFAULT][cr.PROP_POINT_DISC]
+        except KeyError:
+            self.pointers_discount = pointers_discount
 
     def _export_actions_info(self):
         actions_info_db = DefaultExperimentsDatabase(
@@ -292,7 +300,7 @@ already exists the DB of experiments", composed_id
             inferred = NASEnvHelper.infer_action_predecessor_encoding(
                 action, self.actions_info
             )
-            reward = reward*0.15
+            reward = reward*self.pointers_discount
         else:
             inferred = NASEnvHelper.infer_action_encoding(
                 action,
