@@ -585,7 +585,7 @@ of type %s. Message is: %s", composed_id, type(ex), str(ex)
         finally:
             varname = "LIMITED_STORAGE"
             if varname in os.environ and os.path.isdir(log_trainer_dir):
-                shutil.rmtree(log_trainer_dir)
+                shutil.rmtree(log_trainer_dir, ignore_errors=True)
 
     @staticmethod
     def is_terminal(action, action_info):
