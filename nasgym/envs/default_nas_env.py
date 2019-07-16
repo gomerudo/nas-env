@@ -10,6 +10,8 @@ The NAS environment, makes use of OpenAI's Gym environment abstract class. To
 extend more NAS environments, use this class as a model.
 """
 
+import os
+import shutil
 import time
 import numpy as np
 import gym
@@ -469,13 +471,12 @@ class NASEnvHelper:
     @staticmethod
     def reward(state, dataset_handler, log_path="./workspace"):
         """Perform the training of the network, given (state, dataset) pair."""
+        hash_state = compute_str_hash(state_to_string(state))
+        composed_id = "{d}-{h}".format(
+            d=dataset_handler.current_dataset_name(), h=hash_state
+        )
+        log_trainer_dir = "{lp}/trainer-{h}".format(lp=log_path, h=composed_id)
         try:
-
-            hash_state = compute_str_hash(state_to_string(state))
-            composed_id = "{d}-{h}".format(
-                d=dataset_handler.current_dataset_name(), h=hash_state
-            )
-
             nas_logger.debug(
                 "Reward of architecture %s will be computed", composed_id
             )
@@ -490,7 +491,7 @@ class NASEnvHelper:
                 trainer_type=trainer_type,
                 state=state.copy(),
                 dataset_handler=dataset_handler,
-                log_path="{lp}/trainer-{h}".format(lp=log_path, h=composed_id),
+                log_path=log_trainer_dir,
                 variable_scope="cnn-{h}".format(h=hash_state)
             )
 
@@ -573,6 +574,10 @@ attributes are:", type(nas_trainer)
 of type %s. Message is: %s", composed_id, type(ex), str(ex)
             )
             return 0., 0., 0., 0., False
+        finally:
+            varname = "LIMITED_STORAGE"
+            if varname in os.environ and os.path.isdir(log_trainer_dir):
+                shutil.rmtree(log_trainer_dir)
 
     @staticmethod
     def is_terminal(action, action_info):
