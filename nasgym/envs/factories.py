@@ -133,17 +133,27 @@ class TrainerFactory:
     def get_trainer(trainer_type, state, dataset_handler, log_path,
                     variable_scope):
         if trainer_type == "default":
-            batch_size = TrainerFactory._load_default_trainer_attributes()
+            batch_size, decay_steps, beta1, beta2, epsilon, fcl_units, \
+                dropout_rate = \
+                    TrainerFactory._load_default_trainer_attributes()
             return DefaultNASTrainer(
                 encoded_network=state,
                 input_shape=dataset_handler.current_shape(),
                 n_classes=dataset_handler.current_n_classes(),
                 batch_size=batch_size,
                 log_path=log_path,
-                variable_scope=variable_scope
+                variable_scope=variable_scope,
+                op_decay_steps=decay_steps,
+                op_beta1=beta1,
+                op_beta2=beta2,
+                op_epsilon=epsilon,
+                fcl_units=fcl_units,
+                dropout_rate=dropout_rate
             )
         if trainer_type == "early-stop":
-            batch_size = TrainerFactory._load_default_trainer_attributes()
+            babatch_size, decay_steps, beta1, beta2, epsilon, fcl_units, \
+                dropout_rate = \
+                    TrainerFactory._load_default_trainer_attributes()
             # pylint: disable=invalid-name
             rho, mu = TrainerFactory._load_early_stop_trainer_attributes()
             return EarlyStopNASTrainer(
@@ -154,7 +164,14 @@ class TrainerFactory:
                 log_path=log_path,
                 mu=mu,
                 rho=rho,
-                variable_scope=variable_scope
+                variable_scope=variable_scope,
+                op_decay_steps=decay_steps,
+                op_beta1=beta1,
+                op_beta2=beta2,
+                op_epsilon=epsilon,
+                fcl_units=fcl_units,
+                dropout_rate=dropout_rate
+
             )
         raise ValueError("Unkown trainer_type '{t}'".format(t=trainer_type))
 
@@ -175,7 +192,66 @@ class TrainerFactory:
         finally:
             logger.debug("Batch size for trainer set to: %d", batch_size)
 
-        return batch_size
+        # The decay rate
+        try:
+            decay_steps = CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_NEPOCHS]
+            logger.debug("Reading decay rate for trainer from config.ini")
+        except KeyError:
+            decay_steps = 12
+        finally:
+            logger.debug("decay steps for trainer set to: %d", decay_steps)
+
+        # Beta 1
+        try:
+            beta1 = \
+                CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_OPTIMIZER_BETA1]
+            logger.debug("Reading Beta1 for trainer from config.ini")
+        except KeyError:
+            beta1 = 0.9
+        finally:
+            logger.debug("Beta1 for trainer set to: %d", beta1)
+
+        # Beta 2
+        try:
+            beta2 = \
+                CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_OPTIMIZER_BETA2]
+            logger.debug("Reading Beta2 for trainer from config.ini")
+        except KeyError:
+            beta2 = 0.999
+        finally:
+            logger.debug("Beta2 for trainer set to: %d", beta2)
+
+        # Epsilon
+        try:
+            epsilon = \
+                CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_OPTIMIZER_EPSILON]
+            logger.debug("Reading Epsilon for trainer from config.ini")
+        except KeyError:
+            epsilon = 10e-08
+        finally:
+            logger.debug("Epsilon for trainer set to: %d", epsilon)
+
+        # FCL units
+        try:
+            fcl_units = CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_FCLUNITS]
+            logger.debug("Reading FCL units for trainer from config.ini")
+        except KeyError:
+            fcl_units = 1024
+        finally:
+            logger.debug("FCL units for trainer set to: %d", fcl_units)
+
+        # Dropout rate
+        try:
+            dropout_rate = \
+                CONFIG_INI[cr.SEC_TRAINER_DEFAULT][cr.PROP_DROPOUTLAYER_RATE]
+            logger.debug("Reading dropout_rate for trainer from config.ini")
+        except KeyError:
+            dropout_rate = 0.4
+        finally:
+            logger.debug("dropout_rate for trainer set to: %d", dropout_rate)
+
+        return batch_size, decay_steps, beta1, beta2, epsilon, fcl_units, \
+            dropout_rate
 
     # pylint: disable=no-method-argument
     def _load_early_stop_trainer_attributes():

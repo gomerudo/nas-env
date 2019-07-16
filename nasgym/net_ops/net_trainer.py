@@ -64,7 +64,9 @@ class DefaultNASTrainer(NasEnvTrainerBase):
 
     def __init__(self, encoded_network, input_shape, n_classes, batch_size=256,
                  log_path="./trainer", variable_scope="custom",
-                 profile_path="./profiler"):
+                 profile_path="./profiler", op_decay_steps=12, op_beta1=0.9,
+                 op_beta2=0.999, op_epsilon=10e-08, fcl_units=1024,
+                 dropout_rate=0.4):
         """Specific constructor with option for FLOPS and Density."""
         super(DefaultNASTrainer, self).__init__(
             encoded_network=encoded_network,
@@ -75,6 +77,13 @@ class DefaultNASTrainer(NasEnvTrainerBase):
             variable_scope=variable_scope,
             profile_path=profile_path
         )
+        self.op_decay_steps = op_decay_steps
+        self.op_beta1 = op_beta1
+        self.op_beta2 = op_beta2
+        self.op_epsilon = op_epsilon
+        self.fcl_units = fcl_units
+        self.dropout_rate = dropout_rate
+        
         self._set_estimator()
 
     def _set_estimator(self):
@@ -190,13 +199,13 @@ number of replicas available."
                     )
                     dense_layer = tf.layers.dense(
                         inputs=ll_flat,
-                        units=1024,
+                        units=self.fcl_units,
                         activation=tf.nn.relu,
                         name="DENSE"
                     )
                     dropout_layer = tf.layers.dropout(
                         inputs=dense_layer,
-                        rate=0.4,
+                        rate=self.dropout_rate,
                         # pylint: disable=no-member
                         training=mode == tf.estimator.ModeKeys.TRAIN,
                         name="DROPOUT"
@@ -244,18 +253,27 @@ number of replicas available."
                     # pylint: disable=no-member
                     if mode == tf.estimator.ModeKeys.TRAIN:
                         # The optimizer via Gradient Descent (we can change it)
+
+                        global_step = tf.train.get_global_step()
+                        learning_rate = tf.train.exponential_decay(
+                            learning_rate=0.1,
+                            global_step=global_step,
+                            decay_steps=self.op_decay_steps,
+                            decay_rate=0.001
+                        )
+
                         optimizer = tf.train.AdamOptimizer(
-                            learning_rate=0.001,
-                            beta1=0.9,
-                            beta2=0.999,
-                            epsilon=10e-08,
+                            learning_rate=learning_rate,
+                            beta1=self.op_beta1,
+                            beta2=self.op_beta2,
+                            epsilon=self.op_epsilon,
                             name="OPT"
                         )
                         # We say that we want to optimize the loss layer using
                         # the optimizer.
                         train_op = optimizer.minimize(
                             loss=loss_layer,
-                            global_step=tf.train.get_global_step(),
+                            global_step=global_step,
                             name="OPT_MIN"
                         )
                         # And return
@@ -307,20 +325,11 @@ number of replicas available."
 valid value has been provided. Options are: 'default'"
                 )
 
-        # hooks = [
-        #     tf.train.ProfilerHook(
-        #         output_dir=self.log_path,
-        #         save_steps=1,
-        #         show_memory=True
-        #     ),
-        #     OomReportingHook()
-        # ]
-
         nas_logger.debug("Running tensorflow training for %d epochs", n_epochs)
+
         train_res = self.classifier.train(
             input_fn=train_input_fn,
             steps=n_epochs,
-            # hooks=hooks
         )
         nas_logger.debug("TensorFlow training finished")
 
@@ -352,7 +361,9 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
 
     def __init__(self, encoded_network, input_shape, n_classes, batch_size=256,
                  log_path="./trainer", mu=0.5, rho=0.5, variable_scope="cnn",
-                 profile_path="./profiler"):
+                 profile_path="./profiler", op_decay_steps=12, op_beta1=0.9,
+                 op_beta2=0.999, op_epsilon=10e-08, fcl_units=1024,
+                 dropout_rate=0.4):
         """Specific constructor with option for FLOPS and Density."""
         super(EarlyStopNASTrainer, self).__init__(
             encoded_network=encoded_network,
@@ -361,7 +372,13 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
             batch_size=batch_size,
             log_path=log_path,
             variable_scope=variable_scope,
-            profile_path=profile_path
+            profile_path=profile_path,
+            op_decay_steps=op_decay_steps,
+            op_beta1=op_beta1,
+            op_beta2=op_beta2,
+            op_epsilon=op_epsilon,
+            fcl_units=fcl_units,
+            dropout_rate=dropout_rate
         )
         # Custom variables for the refined accuracy in BlockQNN implementation
         # pylint: disable=invalid-name
@@ -422,13 +439,13 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                     )
                     dense_layer = tf.layers.dense(
                         inputs=ll_flat,
-                        units=1024,
+                        units=self.fcl_units,
                         activation=tf.nn.relu,
                         name="DENSE"
                     )
                     dropout_layer = tf.layers.dropout(
                         inputs=dense_layer,
-                        rate=0.4,
+                        rate=self.dropout_rate,
                         # pylint: disable=no-member
                         training=mode == tf.estimator.ModeKeys.TRAIN,
                         name="DROPOUT"
@@ -476,18 +493,26 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                     # pylint: disable=no-member
                     if mode == tf.estimator.ModeKeys.TRAIN:
                         # The optimizer via Gradient Descent (we can change it)
+                        global_step = tf.train.get_global_step()
+                        learning_rate = tf.train.exponential_decay(
+                            learning_rate=0.1,
+                            global_step=global_step,
+                            decay_steps=self.op_decay_steps,
+                            decay_rate=0.001
+                        )
+
                         optimizer = tf.train.AdamOptimizer(
-                            learning_rate=0.001,
-                            beta1=0.9,
-                            beta2=0.999,
-                            epsilon=10e-08,
+                            learning_rate=learning_rate,
+                            beta1=self.op_beta1,
+                            beta2=self.op_beta2,
+                            epsilon=self.op_epsilon,
                             name="OPT"
                         )
                         # We say that we want to optimize the loss layer using
                         # the optimizer.
                         train_op = optimizer.minimize(
                             loss=loss_layer,
-                            global_step=tf.train.get_global_step(),
+                            global_step=global_step,
                             name="OPT_MIN"
                         )
                         # And return
@@ -526,7 +551,7 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
             return self.rho*math.log(self.density)
         except ValueError:
             return 0
-        
+
     @property
     def weighted_log_flops(self):
         """Return the weighted version of the logarithm of the FLOPs."""
