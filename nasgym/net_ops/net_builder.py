@@ -88,7 +88,7 @@ build this network."
                 conv_layer = tf.keras.layers.Conv2D(
                     filters=32,
                     kernel_size=(layer_kernel_size, layer_kernel_size),
-                    padding="same",
+                    # padding="same",
                     name="Conv"
                 )(relu_layer)
 
@@ -106,7 +106,7 @@ build this network."
                 current_layer = tf.keras.layers.MaxPool2D(
                     pool_size=(layer_kernel_size, layer_kernel_size),
                     name="MaxPooling",
-                    padding="same"
+                    # padding="same"
                 )(tf_layers[layer_pred1])
 
         if layer_type == LTYPE_TERMINAL:
