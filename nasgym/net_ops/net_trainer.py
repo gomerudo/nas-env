@@ -256,10 +256,10 @@ number of replicas available."
 
                         global_step = tf.train.get_global_step()
                         learning_rate = tf.train.exponential_decay(
-                            learning_rate=0.1,
+                            learning_rate=0.001,
                             global_step=global_step,
                             decay_steps=self.op_decay_steps,
-                            decay_rate=0.001
+                            decay_rate=0.02
                         )
 
                         optimizer = tf.train.AdamOptimizer(
@@ -495,10 +495,10 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                         # The optimizer via Gradient Descent (we can change it)
                         global_step = tf.train.get_global_step()
                         learning_rate = tf.train.exponential_decay(
-                            learning_rate=0.1,
+                            learning_rate=0.001,
                             global_step=global_step,
                             decay_steps=self.op_decay_steps,
-                            decay_rate=0.001
+                            decay_rate=0.02
                         )
 
                         optimizer = tf.train.AdamOptimizer(
