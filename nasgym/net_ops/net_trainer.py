@@ -263,7 +263,7 @@ number of replicas available."
                         )
 
                         optimizer = tf.train.AdamOptimizer(
-                            learning_rate=learning_rate,
+                            learning_rate=0.001,
                             beta1=self.op_beta1,
                             beta2=self.op_beta2,
                             epsilon=self.op_epsilon,
