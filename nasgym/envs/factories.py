@@ -138,7 +138,7 @@ class TrainerFactory:
                 dropout_rate, split_prop = TrainerFactory._load_default_trainer_attributes()
 
             trainset_length = math.floor(
-                dataset_handler.current_n_observations*(1. - split_prop)
+                dataset_handler.current_n_observations()*(1. - split_prop)
             )
 
             return DefaultNASTrainer(
@@ -160,7 +160,7 @@ class TrainerFactory:
             batch_size, decay_steps, beta1, beta2, epsilon, fcl_units, \
                 dropout_rate, split_prop = TrainerFactory._load_default_trainer_attributes()
             trainset_length = math.floor(
-                dataset_handler.current_n_observations*(1. - split_prop)
+                dataset_handler.current_n_observations()*(1. - split_prop)
             )
 
             # pylint: disable=invalid-name
