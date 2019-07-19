@@ -76,14 +76,25 @@ build this network."
 
         if layer_type == LTYPE_CONVULUTION:
             with tf.name_scope("L{i}_PCC".format(i=layer_index)):
-                batch_norm = tf.keras.layers.BatchNormalization(
-                    name="BatchNorm"
-                )(tf_layers[layer_pred1])
+                # batch_norm = tf.keras.layers.BatchNormalization(
+                #     name="BatchNorm"
+                # )(tf_layers[layer_pred1])
+
+                # relu_layer = tf.keras.layers.ReLU(
+                #     name="ReLU"
+                # )(batch_norm)
+                # # )(tf_layers[layer_pred1])
+
+                # conv_layer = tf.keras.layers.Conv2D(
+                #     filters=32,
+                #     kernel_size=(layer_kernel_size, layer_kernel_size),
+                #     # padding="same",
+                #     name="Conv"
+                # )(relu_layer)
 
                 relu_layer = tf.keras.layers.ReLU(
                     name="ReLU"
-                )(batch_norm)
-                # )(tf_layers[layer_pred1])
+                )(tf_layers[layer_pred1])
 
                 conv_layer = tf.keras.layers.Conv2D(
                     filters=32,
@@ -92,7 +103,11 @@ build this network."
                     name="Conv"
                 )(relu_layer)
 
-                current_layer = conv_layer
+                batch_norm = tf.keras.layers.BatchNormalization(
+                    name="BatchNorm"
+                )(conv_layer)
+
+                current_layer = batch_norm
 
         if layer_type == LTYPE_IDENTITY:
             with tf.name_scope("L{i}_IDENTITY".format(i=layer_index)):
