@@ -153,7 +153,7 @@ number of replicas available."
             # pylint: disable=no-member
             run_config = tf.estimator.RunConfig(
                 session_config=sess_config,
-                save_checkpoints_steps=5,
+                # save_checkpoints_steps=5,
                 # save_checkpoints_secs=None,
                 train_distribute=distributed_strategy,
                 eval_distribute=distributed_strategy
