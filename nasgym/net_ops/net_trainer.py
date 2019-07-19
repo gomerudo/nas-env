@@ -66,7 +66,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
                  log_path="./trainer", variable_scope="custom",
                  profile_path="./profiler", op_decay_steps=12, op_beta1=0.9,
                  op_beta2=0.999, op_epsilon=10e-08, fcl_units=1024,
-                 dropout_rate=0.4):
+                 dropout_rate=0.4, n_obs_train=None):
         """Specific constructor with option for FLOPS and Density."""
         super(DefaultNASTrainer, self).__init__(
             encoded_network=encoded_network,
@@ -83,7 +83,7 @@ class DefaultNASTrainer(NasEnvTrainerBase):
         self.op_epsilon = op_epsilon
         self.fcl_units = fcl_units
         self.dropout_rate = dropout_rate
-        
+        self.n_obs_train = n_obs_train
         self._set_estimator()
 
     def _set_estimator(self):
@@ -307,7 +307,7 @@ number of replicas available."
         return model_fn
 
     def train(self, train_data, train_labels, train_input_fn="default",
-              n_epochs=12):
+              n_epochs=12, n_obs=0):
         """Train the self-network with the the given training configuration."""
         if isinstance(train_input_fn, str):
             if train_input_fn == "default":
@@ -327,9 +327,10 @@ valid value has been provided. Options are: 'default'"
 
         nas_logger.debug("Running tensorflow training for %d epochs", n_epochs)
 
+        steps = n_epochs * self.n_obs_train/self.batch_size
         train_res = self.classifier.train(
             input_fn=train_input_fn,
-            steps=n_epochs,
+            steps=steps,
         )
         nas_logger.debug("TensorFlow training finished")
 
@@ -363,7 +364,7 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                  log_path="./trainer", mu=0.5, rho=0.5, variable_scope="cnn",
                  profile_path="./profiler", op_decay_steps=12, op_beta1=0.9,
                  op_beta2=0.999, op_epsilon=10e-08, fcl_units=1024,
-                 dropout_rate=0.4):
+                 dropout_rate=0.4, n_obs_train=None):
         """Specific constructor with option for FLOPS and Density."""
         super(EarlyStopNASTrainer, self).__init__(
             encoded_network=encoded_network,
@@ -378,7 +379,8 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
             op_beta2=op_beta2,
             op_epsilon=op_epsilon,
             fcl_units=fcl_units,
-            dropout_rate=dropout_rate
+            dropout_rate=dropout_rate,
+            n_obs_train=n_obs_train
         )
         # Custom variables for the refined accuracy in BlockQNN implementation
         # pylint: disable=invalid-name

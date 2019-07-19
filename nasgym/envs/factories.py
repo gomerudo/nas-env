@@ -1,5 +1,6 @@
 """Simple factories for default nas environment."""
 
+import math
 import tensorflow as tf
 from nasgym import nas_logger as logger
 from nasgym import CONFIG_INI
@@ -134,7 +135,12 @@ class TrainerFactory:
                     variable_scope):
         if trainer_type == "default":
             batch_size, decay_steps, beta1, beta2, epsilon, fcl_units, \
-                dropout_rate = TrainerFactory._load_default_trainer_attributes()
+                dropout_rate, split_prop = TrainerFactory._load_default_trainer_attributes()
+
+            trainset_length = math.floor(
+                dataset_handler.current_n_observations*(1. - split_prop)
+            )
+
             return DefaultNASTrainer(
                 encoded_network=state,
                 input_shape=dataset_handler.current_shape(),
@@ -147,11 +153,16 @@ class TrainerFactory:
                 op_beta2=beta2,
                 op_epsilon=epsilon,
                 fcl_units=fcl_units,
-                dropout_rate=dropout_rate
+                dropout_rate=dropout_rate,
+                n_obs_train=trainset_length
             )
         if trainer_type == "early-stop":
             batch_size, decay_steps, beta1, beta2, epsilon, fcl_units, \
-                dropout_rate = TrainerFactory._load_default_trainer_attributes()
+                dropout_rate, split_prop = TrainerFactory._load_default_trainer_attributes()
+            trainset_length = math.floor(
+                dataset_handler.current_n_observations*(1. - split_prop)
+            )
+
             # pylint: disable=invalid-name
             rho, mu = TrainerFactory._load_early_stop_trainer_attributes()
             return EarlyStopNASTrainer(
@@ -168,8 +179,8 @@ class TrainerFactory:
                 op_beta2=beta2,
                 op_epsilon=epsilon,
                 fcl_units=fcl_units,
-                dropout_rate=dropout_rate
-
+                dropout_rate=dropout_rate,
+                n_obs_train=trainset_length
             )
         raise ValueError("Unkown trainer_type '{t}'".format(t=trainer_type))
 
@@ -227,7 +238,7 @@ class TrainerFactory:
         except KeyError:
             epsilon = 10e-08
         finally:
-            logger.debug("Epsilon for trainer set to: %f", epsilon)
+            logger.debug("Epsilon for trainer set to: %.15f", epsilon)
 
         # FCL units
         try:
@@ -236,7 +247,7 @@ class TrainerFactory:
         except KeyError:
             fcl_units = 1024
         finally:
-            logger.debug("FCL units for trainer set to: %f", fcl_units)
+            logger.debug("FCL units for trainer set to: %d", fcl_units)
 
         # Dropout rate
         try:
@@ -248,8 +259,23 @@ class TrainerFactory:
         finally:
             logger.debug("dropout_rate for trainer set to: %f", dropout_rate)
 
+        # Split proportion
+        try:
+            split_prop = \
+                CONFIG_INI[cr.SEC_METADATASET][cr.PROP_TRAIN_TEST_SPLIT_PROP]
+            logger.debug(
+                "Reading split proportion for meta-dataset from config.ini"
+            )
+        except KeyError:
+            split_prop = 0.33
+        finally:
+            logger.debug(
+                "Train-test split proportion for meta-dataset handler set to: \
+%f", split_prop
+            )
+
         return batch_size, decay_steps, beta1, beta2, epsilon, fcl_units, \
-            dropout_rate
+            dropout_rate, split_prop
 
     # pylint: disable=no-method-argument
     def _load_early_stop_trainer_attributes():
