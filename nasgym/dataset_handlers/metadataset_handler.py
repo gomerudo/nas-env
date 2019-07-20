@@ -54,10 +54,6 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
                          is_train=True, split_prop=0.33, random_seed=32,
                          is_distributed=False):
     """Input function for a tensorflow estimator."""
-    # pattern = "{rd}/{id}/*.tfrecords".format(
-    #     rd=self.tfrecords_rootdir,
-    #     id=self.current_dataset_name()
-    # )
     trainset_length = math.floor(data_length*(1. - split_prop))
 
     files = tf.data.Dataset.list_files(

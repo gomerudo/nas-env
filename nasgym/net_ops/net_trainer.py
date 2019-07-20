@@ -84,6 +84,12 @@ class DefaultNASTrainer(NasEnvTrainerBase):
         self.fcl_units = fcl_units
         self.dropout_rate = dropout_rate
         self.n_obs_train = n_obs_train
+        # Total number of steps
+        self._n_steps = \
+            self.op_decay_steps * math.ceil(self.n_obs_train/self.batch_size)
+        self._n_steps = math.ceil(self._n_steps)
+        # Steps per epoch
+        self._steps_per_epoch = math.floor(self._n_steps/self.op_decay_steps)
         self._set_estimator()
 
     def _set_estimator(self):
@@ -255,12 +261,21 @@ number of replicas available."
                         # The optimizer via Gradient Descent (we can change it)
 
                         global_step = tf.train.get_global_step()
-                        learning_rate = tf.train.exponential_decay(
-                            learning_rate=0.001,
-                            global_step=global_step,
-                            decay_steps=self.op_decay_steps,
-                            decay_rate=0.02
-                        )
+                        # learning_rate = tf.train.exponential_decay(
+                        #     learning_rate=0.0001,
+                        #     global_step=global_step,
+                        #     decay_steps=self.op_decay_steps,
+                        #     decay_rate=0.02
+                        # )
+
+                        # The paper's version of the learning rate
+                        n_reductions = math.floor(self.op_decay_steps/5)
+                        learning_rate = 0.001
+                        ul = self.op_decay_steps*self._steps_per_epoch
+                        for i in range(1, n_reductions + 1):
+                            ll = self._steps_per_epoch*5*(i-1) + 1
+                            if global_step in range(ll, ul+1) and i > 0:
+                                learning_rate *= 0.2
 
                         optimizer = tf.train.AdamOptimizer(
                             learning_rate=learning_rate,
@@ -327,7 +342,12 @@ valid value has been provided. Options are: 'default'"
 
         nas_logger.debug("Running tensorflow training for %d epochs", n_epochs)
 
-        steps = n_epochs * self.n_obs_train/self.batch_size
+        steps = n_epochs * math.ceil(self.n_obs_train/self.batch_size)
+        nas_logger.debug(
+            "Running tensorflow training for %d epochs (%d steps)",
+            n_epochs,
+            steps
+        )
         train_res = self.classifier.train(
             input_fn=train_input_fn,
             steps=steps,
