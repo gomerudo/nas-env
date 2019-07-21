@@ -516,12 +516,13 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                     if mode == tf.estimator.ModeKeys.TRAIN:
                         # The optimizer via Gradient Descent (we can change it)
                         global_step = tf.train.get_global_step()
-                        learning_rate = tf.train.exponential_decay(
-                            learning_rate=0.001,
-                            global_step=global_step,
-                            decay_steps=self.op_decay_steps,
-                            decay_rate=0.02
-                        )
+                        n_reductions = math.floor(self.op_decay_steps/5)
+                        learning_rate = 0.001
+                        ul = self.op_decay_steps*self._steps_per_epoch
+                        for i in range(1, n_reductions + 1):
+                            ll = self._steps_per_epoch*5*(i-1) + 1
+                            if global_step in range(ll, ul+1) and i > 0:
+                                learning_rate *= 0.2
 
                         optimizer = tf.train.AdamOptimizer(
                             learning_rate=learning_rate,

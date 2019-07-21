@@ -57,7 +57,7 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
     trainset_length = math.floor(data_length*(1. - split_prop))
 
     files = tf.data.Dataset.list_files(
-        tfrecord_data, shuffle=is_train, seed=random_seed
+        tfrecord_data, shuffle=True, seed=random_seed
     )
     n_threads = multiprocessing.cpu_count()
     logger.debug(
@@ -69,7 +69,7 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
             cycle_length=n_threads
         )
     )
-    dataset = dataset.shuffle(data_length)
+    dataset = dataset.shuffle(data_length, seed=random_seed)
 
     if is_train:
         dataset = dataset.take(trainset_length)
