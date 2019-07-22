@@ -567,6 +567,11 @@ attributes are:", type(nas_trainer)
             )
 
             accuracy = res['accuracy']
+
+            nas_logger.debug(
+                "The global step for the accuracy is %d",
+                res['global_step']
+            )
             if isinstance(nas_trainer, EarlyStopNASTrainer):
                 # Compute the refined reward as defined
                 reward = accuracy*100 - nas_trainer.weighted_log_density - \

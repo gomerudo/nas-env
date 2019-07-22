@@ -96,7 +96,7 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
 
     # batch the examples if using training, otherwise we want to evaluate on
     # the whole dataset in one single step
-    if is_train:    
+    if is_train:
         dataset = dataset.batch(batch_size=batch_size)
 
     # prefetch batch
