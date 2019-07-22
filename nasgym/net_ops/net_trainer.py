@@ -91,6 +91,8 @@ class DefaultNASTrainer(NasEnvTrainerBase):
         # Steps per epoch
         self._steps_per_epoch = math.floor(self._n_steps/self.op_decay_steps)
         self._set_estimator()
+        # An empty list storting all accuracies found during evaluation
+        self.eval_accuracies = []
 
     def _set_estimator(self):
         nas_logger.debug(
@@ -309,6 +311,8 @@ number of replicas available."
                             name="ACC"
                         )
                     }
+
+                    self.eval_accuracies.append(eval_metric_ops['accuracy'])
 
                     # pylint: disable=no-member
                     return tf.estimator.EstimatorSpec(
@@ -555,6 +559,7 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                         )
                     }
 
+                    self.eval_accuracies.append(eval_metric_ops['accuracy'])
                     # pylint: disable=no-member
                     return tf.estimator.EstimatorSpec(
                         mode=mode,

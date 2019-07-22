@@ -572,6 +572,16 @@ attributes are:", type(nas_trainer)
                 "The global step for the accuracy is %d",
                 res['global_step']
             )
+
+            nas_logger.debug(
+                "The list of all accuracies is of length %d",
+                len(nas_trainer.eval_accuracies)
+            )
+            nas_logger.debug(
+                "The accuracies are %s",
+                nas_trainer.eval_accuracies
+            )
+
             if isinstance(nas_trainer, EarlyStopNASTrainer):
                 # Compute the refined reward as defined
                 reward = accuracy*100 - nas_trainer.weighted_log_density - \
