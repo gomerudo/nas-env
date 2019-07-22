@@ -322,7 +322,7 @@ number of replicas available."
         return model_fn
 
     def train(self, train_data, train_labels, train_input_fn="default",
-              n_epochs=12, n_obs=0):
+              n_epochs=12):
         """Train the self-network with the the given training configuration."""
         if isinstance(train_input_fn, str):
             if train_input_fn == "default":
@@ -339,8 +339,6 @@ number of replicas available."
                     "train_input_fn has been specified as string, but no \
 valid value has been provided. Options are: 'default'"
                 )
-
-        nas_logger.debug("Running tensorflow training for %d epochs", n_epochs)
 
         steps = n_epochs * math.ceil(self.n_obs_train/self.batch_size)
         nas_logger.debug(

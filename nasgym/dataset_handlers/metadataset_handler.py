@@ -94,8 +94,10 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
         num_parallel_calls=n_threads
     )
 
-    # batch the examples
-    dataset = dataset.batch(batch_size=batch_size)
+    # batch the examples if using training, otherwise we want to evaluate on
+    # the whole dataset in one single step
+    if is_train:    
+        dataset = dataset.batch(batch_size=batch_size)
 
     # prefetch batch
     dataset = dataset.prefetch(buffer_size=32)
@@ -169,7 +171,7 @@ Using default dataset: %s", self._datasets_list[0])
 
         return metadataset_input_fn(
             tfrecord_data=self._current_files_pattern,
-            data_length=self._current_datalength,
+            data_length=self.current_n_observations(),
             batch_size=self.batch_size,
             is_train=True,
             split_prop=self.split_prop,
