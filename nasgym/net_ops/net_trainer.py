@@ -312,14 +312,16 @@ number of replicas available."
                         )
                     }
 
-                    self.eval_accuracies.append(eval_metric_ops['accuracy'])
+                    # self.eval_accuracies.append(eval_metric_ops['accuracy'])
 
                     # pylint: disable=no-member
-                    return tf.estimator.EstimatorSpec(
+                    spec = tf.estimator.EstimatorSpec(
                         mode=mode,
                         loss=loss_layer,
                         eval_metric_ops=eval_metric_ops
                     )
+                    # self.eval_accuracies.append(spec['accuracy'])
+                    return spec
             # End of tf.variable_scope()
 
         # Return the model_fn function
@@ -559,7 +561,7 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
                         )
                     }
 
-                    self.eval_accuracies.append(eval_metric_ops['accuracy'])
+                    # self.eval_accuracies.append(eval_metric_ops['accuracy'])
                     # pylint: disable=no-member
                     return tf.estimator.EstimatorSpec(
                         mode=mode,
