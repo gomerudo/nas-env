@@ -54,10 +54,19 @@ class TestCustom(unittest.TestCase):
             variable_scope="cnn-{h}".format(h=hash_state)
         )
 
+        def custom_train_input_fn():
+            return dataset_handler.current_train_set()
+
+        def custom_eval_input_fn():
+            return dataset_handler.current_validation_set()
+
+        train_input_fn = custom_train_input_fn
+        eval_input_fn = custom_eval_input_fn
+
         nas_trainer.train(
             train_data=None,
             train_labels=None,
-            train_input_fn=dataset_handler.current_train_set(),
+            train_input_fn=train_input_fn,
             n_epochs=12  # As specified by BlockQNN
         )
 
@@ -65,7 +74,7 @@ class TestCustom(unittest.TestCase):
         res = nas_trainer.evaluate(
             eval_data=None,
             eval_labels=None,
-            eval_input_fn=dataset_handler.current_validation_set()
+            eval_input_fn=eval_input_fn
         )
         nas_logger.debug(
             "Train-evaluation procedure finished for architecture %s",
