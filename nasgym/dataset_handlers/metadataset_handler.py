@@ -57,7 +57,7 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
     trainset_length = math.floor(data_length*(1. - split_prop))
 
     files = tf.data.Dataset.list_files(
-        tfrecord_data, shuffle=True, seed=random_seed
+        tfrecord_data, shuffle=False
     )
     n_threads = multiprocessing.cpu_count()
     logger.debug(
@@ -69,21 +69,26 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
             cycle_length=n_threads
         )
     )
-    dataset = dataset.shuffle(data_length, seed=random_seed)
+    dataset = dataset.shuffle(
+        data_length, seed=random_seed, reshuffle_each_iteration=False
+    )
 
     if is_train:
         dataset = dataset.take(trainset_length)
         current_length = trainset_length
+        dataset = dataset.apply(
+            tf.contrib.data.shuffle_and_repeat(current_length, None)
+        )
     else:
         dataset = dataset.skip(trainset_length)
         current_length = data_length - trainset_length
 
     # shuffle and repeat examples for better randomness and allow training
     # beyond one epoch
-    count_repeat = None if is_train else 1
-    dataset = dataset.apply(
-        tf.contrib.data.shuffle_and_repeat(current_length, count_repeat)
-    )
+    # count_repeat = None if is_train else 1
+    # dataset = dataset.apply(
+    #     tf.contrib.data.shuffle_and_repeat(current_length, count_repeat)
+    # )
 
     logger.debug("Current length in input_fn %d", current_length)
 
@@ -101,11 +106,12 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
     # prefetch batch
     dataset = dataset.prefetch(buffer_size=32)
 
-    if is_distributed:
-        return dataset
+    return dataset
+    # if is_distributed:
+    #     return dataset
 
-    iterator = dataset.make_one_shot_iterator()
-    return iterator.get_next()
+    # iterator = dataset.make_one_shot_iterator()
+    # return iterator.get_next()
 
 
 class MetaDatasetHandler(AbstractDatasetHandler):
