@@ -121,9 +121,9 @@ class DefaultNASEnv(gym.Env):
 
         self._state_encoder = DefaultEncoder(
             n_types=7,  # Hard coded for now
-            max_layers=space_parser.nlayers(),
-            max_kernel=space_parser.max_kernel(),
-            is_multi_branch=space_parser.is_multi_branch()
+            max_layers=space_parser.nlayers,
+            max_kernel=space_parser.max_kernel,
+            is_multi_branch=space_parser.is_multi_branch
         )
         # 5. Reset the environment: a) set initial status as matrix of 0s, b)
         #    set the step_count to 0, set the predecessor*_shift to 0.
@@ -364,7 +364,7 @@ already exists the DB of experiments", composed_id
         self.pred1_shift = 0
         self.pred2_shift = 0
 
-        self.state = self._state_encoder(self._nsc_state)
+        self.state = self._state_encoder.encode(self._nsc_state)
         return self.state
 
     def render(self, mode='human'):
