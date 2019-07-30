@@ -103,7 +103,7 @@ class DefaultNASEnv(gym.Env):
         self.action_space, self.actions_info = space_parser.action_space
         self._export_actions_info()
 
-        logger.debug(
+        nas_logger.debug(
             "Shape of observation space is %s", self.observation_space.shape
         )
 
@@ -344,7 +344,7 @@ already exists the DB of experiments", composed_id
         }
         
         # D. Encode the nsc state
-        self.state = self._state_encoder(self._nsc_state)
+        self.state = self._state_encoder.encode(self._nsc_state)
 
         # E. Return the results as specified in gym.Env
         return self.state, reward, done, info_dict
