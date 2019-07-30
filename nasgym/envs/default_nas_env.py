@@ -342,7 +342,7 @@ already exists the DB of experiments", composed_id
             "pred1_shift": self.pred1_shift,
             "pred2_shift": self.pred2_shift, 
         }
-        
+
         # D. Encode the nsc state
         self.state = self._state_encoder.encode(self._nsc_state)
 
@@ -355,7 +355,7 @@ already exists the DB of experiments", composed_id
         nas_logger.debug("Resetting environment")
 
         self._nsc_state = np.zeros(
-            shape=self.observation_space.shape,
+            shape=[self.observation_space.shape[0], 5],
             dtype=np.int32
         )
         self.step_count = 0
