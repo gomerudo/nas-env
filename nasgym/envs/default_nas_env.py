@@ -22,6 +22,7 @@ from nasgym.envs.envspecs_parsers import AbstractEnvSpecsParser
 from nasgym.envs.factories import EnvSpecsParserFactory
 from nasgym.envs.factories import DatasetHandlerFactory
 from nasgym.envs.factories import TrainerFactory
+from nasgym.envs.state_encoders import DefaultEncoder
 from nasgym.database.default_db import DefaultExperimentsDatabase
 from nasgym.dataset_handlers.default_handler import AbstractDatasetHandler
 from nasgym.dataset_handlers.default_handler import DefaultDatasetHandler
@@ -102,6 +103,10 @@ class DefaultNASEnv(gym.Env):
         self.action_space, self.actions_info = space_parser.action_space
         self._export_actions_info()
 
+        logger.debug(
+            "Shape of observation space is %s", self.observation_space.shape
+        )
+
         # 4. Validate and assign the dataset handler that will provide the
         #    image classification task to solve (this task might change
         #    between experiments)
@@ -114,9 +119,15 @@ class DefaultNASEnv(gym.Env):
         else:
             raise TypeError("Invalid type for dataset_handler")
 
+        self._state_encoder = DefaultEncoder(
+            n_types=7,  # Hard coded for now
+            max_layers=space_parser.nlayers(),
+            max_kernel=space_parser.max_kernel(),
+            is_multi_branch=space_parser.is_multi_branch()
+        )
         # 5. Reset the environment: a) set initial status as matrix of 0s, b)
         #    set the step_count to 0, set the predecessor*_shift to 0.
-        self.state = self.reset()
+        self.state = self.reset()  # The state is encoded
 
     def _read_params_from_config(self, max_steps, log_path, db_file,
                                  config_file, action_space_type,
@@ -192,11 +203,11 @@ class DefaultNASEnv(gym.Env):
     def step(self, action):
         """Perform an step in the environment, given an action."""
         pred_oob = False  # Default: False. Value can change in the first 'if'
-        bkp_original = self.state.copy()  # The state before any action
+        bkp_original = self._nsc_state.copy()  # The state before any action
 
         # 1. Perform the action so we can act accordingly.
         action_res = NASEnvHelper.perform_action(
-            self.state,
+            self._nsc_state,
             action,
             self.actions_info,
             self.pred1_shift,
@@ -216,19 +227,19 @@ class DefaultNASEnv(gym.Env):
 
             # Check if predecessors are out of boundaries after the shift
             pred_oob = not NASEnvHelper.is_valid_pred_shift(
-                self.pred1_shift, self.pred2_shift, self.state
+                self.pred1_shift, self.pred2_shift, self._nsc_state
             )
         # Option b) The action was 'add layer', so we just change the state
         else:
-            self.state = action_res
+            self._nsc_state = action_res
 
         # 2. We always sort the state representation
-        self.state = sort_sequence(self.state, as_list=False)
+        self._nsc_state = sort_sequence(self._nsc_state, as_list=False)
 
         # 3. We build the composed ID: dataset_name + hash_of_sequence
         composed_id = "{d}-{h}".format(
             d=self.dataset_handler.current_dataset_name(),
-            h=compute_str_hash(state_to_string(self.state))
+            h=compute_str_hash(state_to_string(self._nsc_state))
         )
 
         # 4. Compute the reward: if it exists already in the DB, skip
@@ -254,7 +265,7 @@ already exists the DB of experiments", composed_id
 
             start = time.time()
             reward, accuracy, density, flops, status = NASEnvHelper.reward(
-                self.state,
+                self._nsc_state,
                 self.dataset_handler,
                 self.log_path
             )
@@ -271,7 +282,7 @@ already exists the DB of experiments", composed_id
             self.db_manager.add(
                 {
                     "dataset-nethash": composed_id,
-                    "netstring": self.state,
+                    "netstring": self._nsc_state,
                     "reward": reward,
                     "accuracy": accuracy,
                     "density": density,
@@ -294,7 +305,7 @@ already exists the DB of experiments", composed_id
         #    ones will always be invalid too.)
         done = self.step_count == self.max_steps or \
             NASEnvHelper.is_terminal(action, self.actions_info) or not status \
-            or self.state[0, 0] != 0 or pred_oob  # first 'or' means full
+            or self._nsc_state[0, 0] != 0 or pred_oob  # first 'or' means full
 
         if NASEnvHelper.is_predecessor_action(action, self.actions_info):
             inferred = NASEnvHelper.infer_action_predecessor_encoding(
@@ -319,9 +330,9 @@ already exists the DB of experiments", composed_id
             "original_state_hashed": compute_str_hash(
                 state_to_string(bkp_original)
             ),
-            "end_state": self.state,
+            "end_state": self._nsc_state,
             "end_state_hashed": compute_str_hash(
-                state_to_string(self.state)
+                state_to_string(self._nsc_state)
             ),
             "action_id": action,
             "action_inferred": inferred,
@@ -331,8 +342,11 @@ already exists the DB of experiments", composed_id
             "pred1_shift": self.pred1_shift,
             "pred2_shift": self.pred2_shift, 
         }
+        
+        # D. Encode the nsc state
+        self.state = self._state_encoder(self._nsc_state)
 
-        # D. Return the results as specified in gym.Env
+        # E. Return the results as specified in gym.Env
         return self.state, reward, done, info_dict
 
     def reset(self):
@@ -340,7 +354,7 @@ already exists the DB of experiments", composed_id
         # Reset the state to only zeros
         nas_logger.debug("Resetting environment")
 
-        self.state = np.zeros(
+        self._nsc_state = np.zeros(
             shape=self.observation_space.shape,
             dtype=np.int32
         )
@@ -350,11 +364,12 @@ already exists the DB of experiments", composed_id
         self.pred1_shift = 0
         self.pred2_shift = 0
 
+        self.state = self._state_encoder(self._nsc_state)
         return self.state
 
     def render(self, mode='human'):
         """Render the environment, according to the specified mode."""
-        for row in self.state:
+        for row in self._nsc_state:
             print(row)
 
     # This is not from gym.Env interface. This is used by our Meta-RL algorithm

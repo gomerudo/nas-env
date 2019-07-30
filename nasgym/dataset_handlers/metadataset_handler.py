@@ -106,12 +106,12 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
     # prefetch batch
     dataset = dataset.prefetch(buffer_size=32)
 
-    return dataset
-    # if is_distributed:
-    #     return dataset
+    # return dataset
+    if is_distributed:
+        return dataset
 
-    # iterator = dataset.make_one_shot_iterator()
-    # return iterator.get_next()
+    iterator = dataset.make_one_shot_iterator()
+    return iterator.get_next()
 
 
 class MetaDatasetHandler(AbstractDatasetHandler):

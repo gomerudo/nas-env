@@ -224,7 +224,7 @@ class ChainedEnvParser(AbstractEnvSpecsParser):
         logger.debug("Obtaining the action space for the environment")
         action_info = {}
         counter = 0
-
+        self._all_kernels = set()
         for layer in nasenv_dict['layers']:
             for layer_key, layer_config in layer.items():
                 self._validate_layer_config(layer_config)
@@ -239,6 +239,7 @@ class ChainedEnvParser(AbstractEnvSpecsParser):
 
                 # For every kernel
                 for kernel in kernels_list:
+                    self._all_kernels.add(int(kernel))
                     action_type = \
                         "{type}_k-{kernel}_pred1-{pred1}_pred2-{pred2}".format(
                             type=layer_key,
@@ -252,10 +253,11 @@ class ChainedEnvParser(AbstractEnvSpecsParser):
         return spaces.Discrete(counter), action_info
 
     def _populate_observation_space(self, max_nlayers):
+        y_axis_size = 8 + self.max_kernel + 1 + max_nlayers + 1
         return spaces.Box(
             0,
             np.inf,
-            shape=[max_nlayers, 5],  # Default length per NSC is 5
+            shape=[max_nlayers, y_axis_size],  # Default length per NSC is 5
             dtype='int32'
         )
 
@@ -322,6 +324,21 @@ NAS environment definition. Minimun expected is {me}".format(me=min_expected)
     def action_space(self):
         """Return the action space and its info dictionary."""
         return self._action_space, self._action_info
+
+    @property
+    def nlayers(self):
+        """Return the number of layers allowed in the state."""
+        return self._observation_space.shape[0]
+
+    @property
+    def max_kernel(self):
+        """Return the maximum value of the kernels added to the environment."""
+        return max(self._all_kernels)
+
+    @property
+    def is_multi_branch(self):
+        """Return whether or not the parser is for a multi-branch space."""
+        return False
 
 
 class PredecessorFreeEnvParser(AbstractEnvSpecsParser):
@@ -370,7 +387,7 @@ class PredecessorFreeEnvParser(AbstractEnvSpecsParser):
         logger.debug("Obtaining the action space for the environment")
         action_info = {}
         counter = 0
-
+        self._all_kernels = set()
         for layer in nasenv_dict['layers']:
             for layer_key, layer_config in layer.items():
                 self._validate_layer_config(layer_config)
@@ -385,6 +402,7 @@ class PredecessorFreeEnvParser(AbstractEnvSpecsParser):
 
                 # For every kernel
                 for kernel in kernels_list:
+                    self._all_kernels.add(int(kernel))
                     action_type = \
                         "{type}_k-{kernel}_pred1-{pred1}_pred2-{pred2}".format(
                             type=layer_key,
@@ -406,10 +424,11 @@ class PredecessorFreeEnvParser(AbstractEnvSpecsParser):
         return spaces.Discrete(counter), action_info
 
     def _populate_observation_space(self, max_nlayers):
+        y_axis_size = 8 + self.max_kernel + 1 + (max_nlayers + 1)*2
         return spaces.Box(
             0,
             np.inf,
-            shape=[max_nlayers, 5],  # Default length per NSC is 5
+            shape=[max_nlayers, y_axis_size],  # Default length per NSC is 5
             dtype='int32'
         )
 
@@ -476,3 +495,18 @@ NAS environment definition. Minimun expected is {me}".format(me=min_expected)
     def action_space(self):
         """Return the action space and its info dictionary."""
         return self._action_space, self._action_info
+
+    @property
+    def nlayers(self):
+        """Return the number of layers allowed in the state."""
+        return self._observation_space.shape[0]
+
+    @property
+    def max_kernel(self):
+        """Return the maximum value of the kernels added to the environment."""
+        return max(self._all_kernels)
+
+    @property
+    def is_multi_branch(self):
+        """Return whether or not the parser is for a multi-branch space."""
+        return False
