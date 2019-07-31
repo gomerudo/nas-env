@@ -47,7 +47,7 @@ class DefaultNASEnv(gym.Env):
     """Default Neural Architecture Search (NAS) environment."""
 
     metadata = {'render.modes': ['human']}
-    reward_range = (0.0, 100.0)
+    reward_range = (0.0, 1.0)
 
     def __init__(self, config_file="resources/nasenv.yml", max_steps=100,
                  dataset_handler="default", action_space_type="default",
@@ -274,10 +274,10 @@ already exists the DB of experiments", composed_id
             running_time = int(end - start)
             # Fix the reward if they go outside the boundaries: Not really
             # needed but just to make sure...
-            reward = DefaultNASEnv.reward_range[1] \
-                if reward > DefaultNASEnv.reward_range[1] else reward
-            reward = DefaultNASEnv.reward_range[0] \
-                if reward < DefaultNASEnv.reward_range[0] else reward
+            # reward = DefaultNASEnv.reward_range[1] \
+            #     if reward > DefaultNASEnv.reward_range[1] else reward
+            # reward = DefaultNASEnv.reward_range[0] \
+            #     if reward < DefaultNASEnv.reward_range[0] else reward
 
             self.db_manager.add(
                 {
@@ -294,7 +294,7 @@ already exists the DB of experiments", composed_id
             )
 
         # If the predecessors were out of boundaries, the reward is 0.
-        reward = 0 if pred_oob else reward
+        reward = 0. if pred_oob else reward/100
 
         # A. Increase the number of steps cause we are done with the action
         self.step_count += 1
