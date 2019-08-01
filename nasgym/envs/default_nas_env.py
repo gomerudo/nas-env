@@ -501,7 +501,6 @@ class NASEnvHelper:
 
     @staticmethod
     def reward(args_dict):
-        import tensorflow as tf  # Try workaround for multiprocessing
         state = args_dict['state']
         dataset_handler = args_dict['dataset_handler']
         log_path = args_dict['log_path']
