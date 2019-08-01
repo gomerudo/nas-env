@@ -20,7 +20,6 @@ def n_elements(records_list):
 
 def parser(record_dataset):
     """Parse a given TFRecordsDataset object."""
-    global tf
     import tensorflow as tf
     # This is the definition we expect in the TFRecords for meta-dataset
     features = {
@@ -55,7 +54,6 @@ def metadataset_input_fn(tfrecord_data, data_length, batch_size=128,
                          is_train=True, split_prop=0.33, random_seed=32,
                          is_distributed=False):
     """Input function for a tensorflow estimator."""
-    global tf
     import tensorflow as tf
     trainset_length = math.floor(data_length*(1. - split_prop))
 

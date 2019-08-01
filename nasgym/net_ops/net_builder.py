@@ -12,7 +12,6 @@ from nasgym.net_ops import LTYPE_TERMINAL
 
 def sequence_to_net(sequence, input_tensor):
     """Build a network with TensorFlow, given a sequence of NSC."""
-    global tf
     import tensorflow as tf
 
     # We use this list to store the built layers. Remember that each time we
@@ -176,7 +175,6 @@ def safe_concat(tensor_a, tensor_b, name):
 
     The fix of the shapes is done with a zero-padding on both tensors.
     """
-    global tf
     import tensorflow as tf
 
     fixed_b = fix_tensor_shape(
@@ -207,7 +205,6 @@ def safe_add(tensor_a, tensor_b, name):
 
     The fix of the shapes is done with a zero-padding on both tensors.
     """
-    global tf
     import tensorflow as tf
 
     fixed_b = fix_tensor_shape(
@@ -239,7 +236,6 @@ def is_same_rank(tensor_a, tensor_b):
 
 def fix_tensor_shape(tensor_target, tensor_reference, free_axis=1, name="pad"):
     """Fix a tensor's shape with respect to a reference using padding."""
-    global tf
     import tensorflow as tf
 
     ref_shape = tensor_reference.get_shape().dims

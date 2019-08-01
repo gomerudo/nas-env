@@ -39,7 +39,6 @@ class DatasetHandlerFactory:
     @staticmethod
     def get_handler(handler_type, **kwargs):
         """Return the parser of interest."""
-        global tf
         import tensorflow as tf
 
         # a) Default handler (cifar10 from TensorFlow datasets)

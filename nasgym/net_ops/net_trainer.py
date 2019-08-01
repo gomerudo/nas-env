@@ -82,7 +82,6 @@ class DefaultNASTrainer(NasEnvTrainerBase):
         self.eval_accuracies = []
 
     def _set_estimator(self):
-        global tf
         import tensorflow as tf
 
         nas_logger.debug(
@@ -170,7 +169,6 @@ number of replicas available."
         """Implement training of network with custom approach."""
         # Define the model_fn we want to return
         def model_fn(features, labels, mode):
-            global tf
             import tensorflow as tf
 
             with tf.variable_scope(self.variable_scope):
@@ -323,7 +321,6 @@ number of replicas available."
     def train(self, train_data, train_labels, train_input_fn="default",
               n_epochs=12):
         """Train the self-network with the the given training configuration."""
-        global tf
         import tensorflow as tf
 
         if isinstance(train_input_fn, str):
@@ -358,7 +355,6 @@ valid value has been provided. Options are: 'default'"
 
     def evaluate(self, eval_data, eval_labels, eval_input_fn="default"):
         """Evaluate a given dataset, with the internal network."""
-        global tf
         import tensorflow as tf
 
         # Validations:
@@ -421,7 +417,6 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
         """Implement training of network with custom approach."""
         # Define the model_fn we want to return
         def model_fn(features, labels, mode):
-            global tf
             import tensorflow as tf
 
             with tf.variable_scope(self.variable_scope):
