@@ -274,16 +274,20 @@ already exists the DB of experiments", composed_id
                 'dataset_handler': self.dataset_handler,
                 'log_path': self.log_path,
             }
-            with Pool(processes=1) as pool:
-                res = pool.map(NASEnvHelper.reward, [args_dict])
+            # with Pool(processes=1) as pool:
+            #     res = pool.map(NASEnvHelper.reward, [args_dict])
 
-            reward, accuracy, density, flops, status = \
-                res[0][0], res[0][1], res[0][2], res[0][3], res[0][4]
+            # reward, accuracy, density, flops, status = \
+            #     res[0][0], res[0][1], res[0][2], res[0][3], res[0][4]
             # reward, accuracy, density, flops, status = NASEnvHelper.reward(
             #     self._nsc_state,
             #     self.dataset_handler,
             #     self.log_path
             # )
+            reward, accuracy, density, flops, status = NASEnvHelper.reward(
+                args_dict
+            )
+
             end = time.time()
             running_time = int(end - start)
 
@@ -619,6 +623,13 @@ of type %s. Message is: %s", composed_id, type(ex), str(ex)
             varname = "LIMITED_STORAGE"
             if varname in os.environ and os.path.isdir(log_trainer_dir):
                 shutil.rmtree(log_trainer_dir, ignore_errors=True)
+            # list open files
+            import psutil
+            proc = psutil.Process()
+            nas_logger.info(
+                "Open files: %s", proc.open_files
+            )
+            # print proc.open_files()
 
     @staticmethod
     def is_terminal(action, action_info):
