@@ -11,9 +11,6 @@ from nasgym.utl import configreader as cr
 
 def n_elements(records_list):
     """Return the number of elements in a tensorflow records file."""
-    global tf
-    import tensorflow as tf
-
     count = 0
     for tfrecords_file in records_list:
         for _ in tf.python_io.tf_record_iterator(tfrecords_file):
