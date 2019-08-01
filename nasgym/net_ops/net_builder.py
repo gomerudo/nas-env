@@ -1,7 +1,6 @@
 """Classes and methods for Net building."""
 
 import logging
-import tensorflow as tf
 from nasgym.net_ops import LTYPE_ADD
 from nasgym.net_ops import LTYPE_AVGPOOLING
 from nasgym.net_ops import LTYPE_CONCAT
@@ -13,6 +12,8 @@ from nasgym.net_ops import LTYPE_TERMINAL
 
 def sequence_to_net(sequence, input_tensor):
     """Build a network with TensorFlow, given a sequence of NSC."""
+    import tensorflow as tf
+
     # We use this list to store the built layers. Remember that each time we
     # iterate, we find the predecesor of the current layer, hence, the inputs
     # are never a problem. If for some reason the layer has no input, we should
@@ -174,6 +175,8 @@ def safe_concat(tensor_a, tensor_b, name):
 
     The fix of the shapes is done with a zero-padding on both tensors.
     """
+    import tensorflow as tf
+
     fixed_b = fix_tensor_shape(
         tensor_target=tensor_b,
         tensor_reference=tensor_a,
@@ -202,6 +205,8 @@ def safe_add(tensor_a, tensor_b, name):
 
     The fix of the shapes is done with a zero-padding on both tensors.
     """
+    import tensorflow as tf
+
     fixed_b = fix_tensor_shape(
         tensor_target=tensor_b,
         tensor_reference=tensor_a,
@@ -231,6 +236,8 @@ def is_same_rank(tensor_a, tensor_b):
 
 def fix_tensor_shape(tensor_target, tensor_reference, free_axis=1, name="pad"):
     """Fix a tensor's shape with respect to a reference using padding."""
+    import tensorflow as tf
+
     ref_shape = tensor_reference.get_shape().dims
     target_shape = tensor_target.get_shape().dims
     target_rank = len(target_shape)

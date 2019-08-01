@@ -1,7 +1,6 @@
 """Simple factories for default nas environment."""
 
 import math
-import tensorflow as tf
 from nasgym import nas_logger as logger
 from nasgym import CONFIG_INI
 import nasgym.utl.configreader as cr
@@ -40,6 +39,8 @@ class DatasetHandlerFactory:
     @staticmethod
     def get_handler(handler_type, **kwargs):
         """Return the parser of interest."""
+        import tensorflow as tf
+
         # a) Default handler (cifar10 from TensorFlow datasets)
         if handler_type == "default":
             (train_data, train_labels), (eval_data, eval_labels) = \
