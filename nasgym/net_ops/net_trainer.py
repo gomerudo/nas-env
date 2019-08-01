@@ -3,7 +3,7 @@
 import os
 import math
 from abc import ABC, abstractmethod
-import tensorflow as tf
+# import tensorflow as tf
 from tensorflow.python.client import device_lib
 import nasgym.utl.configreader as cr
 from nasgym import nas_logger

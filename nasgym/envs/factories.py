@@ -1,7 +1,7 @@
 """Simple factories for default nas environment."""
 
 import math
-import tensorflow as tf
+# import tensorflow as tf
 from nasgym import nas_logger as logger
 from nasgym import CONFIG_INI
 import nasgym.utl.configreader as cr
@@ -41,13 +41,13 @@ class DatasetHandlerFactory:
     def get_handler(handler_type, **kwargs):
         """Return the parser of interest."""
         # a) Default handler (cifar10 from TensorFlow datasets)
-        if handler_type == "default":
-            (train_data, train_labels), (eval_data, eval_labels) = \
-                tf.keras.datasets.cifar10.load_data()
+        # if handler_type == "default":
+        #     (train_data, train_labels), (eval_data, eval_labels) = \
+        #         tf.keras.datasets.cifar10.load_data()
 
-            return DefaultDatasetHandler(
-                train_data, train_labels, eval_data, eval_labels, "cifar10"
-            )
+        #     return DefaultDatasetHandler(
+        #         train_data, train_labels, eval_data, eval_labels, "cifar10"
+        #     )
         # b) Handler for Meta-dataset
         if handler_type == "meta-dataset":
             tfrecords_root, batch_size, split_prop, random_seed = \

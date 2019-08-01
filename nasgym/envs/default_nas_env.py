@@ -274,7 +274,12 @@ already exists the DB of experiments", composed_id
                 'dataset_handler': self.dataset_handler,
                 'log_path': self.log_path,
             }
-            with Pool(processes=1) as pool:
+
+            def init_pool():
+                global tf
+                import tensorflow as tf
+
+            with Pool(processes=1, initializer=init_pool) as pool:
                 res = pool.map(NASEnvHelper.reward, [args_dict])
 
             reward, accuracy, density, flops, status = \
