@@ -1,6 +1,7 @@
 """Register the different NAS environments we makea available by default."""
 
 import logging
+import tensorflow as tf
 from gym.envs.registration import register
 import nasgym.utl.configreader as cr
 from nasgym.dataset_handlers.default_handler import DefaultDatasetHandler

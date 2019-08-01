@@ -1,7 +1,7 @@
 """Classes and methods for Net building."""
 
 import logging
-# import tensorflow as tf
+import tensorflow as tf
 from nasgym.net_ops import LTYPE_ADD
 from nasgym.net_ops import LTYPE_AVGPOOLING
 from nasgym.net_ops import LTYPE_CONCAT

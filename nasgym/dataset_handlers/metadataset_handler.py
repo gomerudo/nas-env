@@ -3,7 +3,7 @@
 import math
 import glob
 import multiprocessing
-# import tensorflow as tf
+import tensorflow as tf
 from nasgym import nas_logger as logger
 from nasgym.dataset_handlers.default_handler import AbstractDatasetHandler
 from nasgym import CONFIG_INI
