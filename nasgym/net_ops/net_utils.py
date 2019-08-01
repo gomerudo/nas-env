@@ -6,6 +6,7 @@ import numpy as np
 
 def compute_network_density(graph, collection_name):
     """Compute the Density of a TensorFlow Neural Network."""
+    global tf
     import tensorflow as tf
 
     graph = tf.get_default_graph()
@@ -29,6 +30,7 @@ def compute_network_density(graph, collection_name):
 
 def compute_network_flops(graph, collection_name, logdir="workspace"):
     """Compute the Density of a TensorFlow Neural Network."""
+    global tf
     import tensorflow as tf
 
     # Prepare the logdir
