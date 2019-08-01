@@ -3,6 +3,7 @@
 import os
 import math
 from abc import ABC, abstractmethod
+import tensorflow as tf
 from tensorflow.python.client import device_lib
 import nasgym.utl.configreader as cr
 from nasgym import nas_logger
@@ -46,6 +47,18 @@ class NasEnvTrainerBase(ABC):
         raise NotImplementedError("Method must be implemented by subclass")
 
 
+class OomReportingHook(tf.train.SessionRunHook):
+    """Report OOM during training when using Estimator."""
+
+    def before_run(self, run_context):
+        return tf.train.SessionRunArgs(
+            fetches=[],  # no extra fetches
+            options=tf.RunOptions(
+                report_tensor_allocations_upon_oom=True
+            )
+        )
+
+
 class DefaultNASTrainer(NasEnvTrainerBase):
     """Implement Training with Eearly Stop Strategy."""
 
@@ -82,8 +95,6 @@ class DefaultNASTrainer(NasEnvTrainerBase):
         self.eval_accuracies = []
 
     def _set_estimator(self):
-        import tensorflow as tf
-
         nas_logger.debug(
             "Configuring the estimator that will be used for training and \
 evaluation"
@@ -169,8 +180,6 @@ number of replicas available."
         """Implement training of network with custom approach."""
         # Define the model_fn we want to return
         def model_fn(features, labels, mode):
-            import tensorflow as tf
-
             with tf.variable_scope(self.variable_scope):
                 # 1. Define the input placeholder
                 if len(self.input_shape) == 2:
@@ -321,8 +330,6 @@ number of replicas available."
     def train(self, train_data, train_labels, train_input_fn="default",
               n_epochs=12):
         """Train the self-network with the the given training configuration."""
-        import tensorflow as tf
-
         if isinstance(train_input_fn, str):
             if train_input_fn == "default":
                 # pylint: disable=no-member
@@ -355,8 +362,6 @@ valid value has been provided. Options are: 'default'"
 
     def evaluate(self, eval_data, eval_labels, eval_input_fn="default"):
         """Evaluate a given dataset, with the internal network."""
-        import tensorflow as tf
-
         # Validations:
         # If it is of type str, make sure is a valid
         if isinstance(eval_input_fn, str):
@@ -417,8 +422,6 @@ class EarlyStopNASTrainer(DefaultNASTrainer):
         """Implement training of network with custom approach."""
         # Define the model_fn we want to return
         def model_fn(features, labels, mode):
-            import tensorflow as tf
-
             with tf.variable_scope(self.variable_scope):
                 # 1. Define the input placeholder
                 if len(self.input_shape) == 2:  # Reshape if necessary
