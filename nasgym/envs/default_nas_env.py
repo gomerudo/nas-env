@@ -15,6 +15,7 @@ import shutil
 import time
 import numpy as np
 import gym
+from multiprocessing import Pool
 import nasgym.utl.configreader as cr
 from nasgym import nas_logger
 from nasgym import CONFIG_INI
@@ -263,21 +264,28 @@ already exists the DB of experiments", composed_id
                 composed_id
             )
 
+            # Compute the reward with training of the network. We make in
+            # parallel to avoid ResourceExhausted errors that are caused by
+            # 'too many open files' exceptions due to TensorFlow's behaviour.
             start = time.time()
-            reward, accuracy, density, flops, status = NASEnvHelper.reward(
-                self._nsc_state,
-                self.dataset_handler,
-                self.log_path
-            )
-            end = time.time()
+            # build the dict of arguments for the parallel call
+            args_dict = {
+                'state': self._nsc_state,
+                'dataset_handler': self.dataset_handler,
+                'log_path': self.log_path,
+            }
+            with Pool(processes=1) as pool:
+                res = pool.map(NASEnvHelper.reward, [args_dict])
 
+            reward, accuracy, density, flops, status = \
+                res[0][0], res[0][1], res[0][2], res[0][3], res[0][4]
+            # reward, accuracy, density, flops, status = NASEnvHelper.reward(
+            #     self._nsc_state,
+            #     self.dataset_handler,
+            #     self.log_path
+            # )
+            end = time.time()
             running_time = int(end - start)
-            # Fix the reward if they go outside the boundaries: Not really
-            # needed but just to make sure...
-            # reward = DefaultNASEnv.reward_range[1] \
-            #     if reward > DefaultNASEnv.reward_range[1] else reward
-            # reward = DefaultNASEnv.reward_range[0] \
-            #     if reward < DefaultNASEnv.reward_range[0] else reward
 
             self.db_manager.add(
                 {
@@ -492,7 +500,11 @@ class NASEnvHelper:
         return (predecessor, operation)  # Return a tuple
 
     @staticmethod
-    def reward(state, dataset_handler, log_path="./workspace"):
+    def reward(args_dict):
+        state = args_dict['state']
+        dataset_handler = args_dict['dataset_handler']
+        log_path = args_dict['log_path']
+    # def reward(state, dataset_handler, log_path="./workspace"):
         """Perform the training of the network, given (state, dataset) pair."""
         hash_state = compute_str_hash(state_to_string(state))
         composed_id = "{d}-{h}".format(
