@@ -509,4 +509,4 @@ NAS environment definition. Minimun expected is {me}".format(me=min_expected)
     @property
     def is_multi_branch(self):
         """Return whether or not the parser is for a multi-branch space."""
-        return False
+        return True

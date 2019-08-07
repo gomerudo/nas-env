@@ -623,12 +623,14 @@ of type %s. Message is: %s", composed_id, type(ex), str(ex)
             varname = "LIMITED_STORAGE"
             if varname in os.environ and os.path.isdir(log_trainer_dir):
                 shutil.rmtree(log_trainer_dir, ignore_errors=True)
+
+                shutil.rmtree(log_trainer_dir, ignore_errors=True)
             # list open files
-            import psutil
-            proc = psutil.Process()
-            nas_logger.info(
-                "Open files: %s", proc.open_files
-            )
+            # import psutil
+            # proc = psutil.Process()
+            # nas_logger.info(
+                # "N open files: %s", proc.open_files
+            # )
             # print proc.open_files()
 
     @staticmethod
