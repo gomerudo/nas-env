@@ -217,6 +217,7 @@ class DefaultNASEnv(gym.Env):
 
         # Option a) Shift the predecessors
         if isinstance(action_res, tuple):
+            nas_logger.debug("Performing shifting operation %s", action_res)
             if action_res[1] == 'U':
                 shift = 1
             if action_res[1] == 'D':
