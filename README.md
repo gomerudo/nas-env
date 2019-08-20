@@ -1,24 +1,32 @@
-# nas-env
-
-**[Under development]**
+# NASGym
 
 A simple OpenAI Gym environment for Neural Architecture Search (NAS).
 
--------
+**Under development:** The code and documentation of this repository may contain minor bugs.
 
-## Development notes
+## Overview
 
-The TODOs per module are available in the `README.md` file under each directory.
-For a quick access, click the following links:
+This is a python package developed for the *Learning to reinforcement learn for Neural Architecture Search* MSc thesis at the Eindhoven University of Technology (TU/e).
 
-- [`nasgym`](nasgym/README.md)
-- [`nasgym/envs`](nasgym/envs/README.md)
-- [`nasgym/net_ops`](nasgym/net_ops/README.md)
-- [`nasgym/utl`](nasgym/utl/README.md)
-- [`test`](test/README.md)
+The environment is fully-compatible with the OpenAI baselines and exposes a NAS environment following the Neural Structure Code of [BlockQNN: Efficient Block-wise Neural Network Architecture Generation](https://arxiv.org/abs/1808.05584). Under this setting, a Neural Network (i.e. the state for the reinforcement learning agent) is modeled as a list of NSCs, an action is the addition of a layer to the network, and the reward is the accuracy after the early-stop training. The datasets considered so far are the CIFAR-10 dataset (available by default) and the meta-dataset (has to be manually downloaded as specified in [this repository](https://github.com/gomerudo/meta-dataset)).
 
-### General TODOs
+The logic implemented allows to customize the behaviour of the environment, although some coding is still needed.
 
-- [X] Create the `resources` directory to store the YAML file and others.
-- [ ] Improve docstrings
-- [ ] Use logging
+## Installation
+
+The recommend way to install the package is in editable mode:
+
+```
+cd ${GIT_STORAGE}/nas-env
+pip install -e .
+```
+
+## Future plans
+
+- Architectural changes to the source code to allow to plug-in the different NAS elements, i.e. the performance estimation strategy and the search space.
+- Generate documentation
+- Publish the package in PiPy.
+
+## Contributing
+
+So far I am the only contributor to this project, but I would like to improve the design to allow for an even easier integration of different methodologies for the environment. In this way, different NAS elements can be plugged-in 
