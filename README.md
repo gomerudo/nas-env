@@ -30,4 +30,4 @@ pip install -e .
 
 ## Contributing
 
-So far I am the only contributor to this project, but I would like to improve the design to allow for an even easier integration of different methodologies for the environment. In this way, different NAS elements can be plugged-in 
+So far I am the only contributor to this project, but I would like to improve the design to allow for an even easier integration of different methodologies for the environment. In this way, different NAS elements can be plugged-in. Please feel free to join me in this quest!
