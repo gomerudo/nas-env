@@ -18,6 +18,7 @@ The recommend way to install the package is in editable mode:
 
 ```
 cd ${GIT_STORAGE}/nas-env
+git checkout develop
 pip install -e .
 ```
 
