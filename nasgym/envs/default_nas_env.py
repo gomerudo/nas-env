@@ -461,12 +461,12 @@ class NASEnvHelper:
         layer_pred2 = action_arr[3].split("-")[1]
 
         if layer_pred1 == "L":
-            layer_pred1 = current_layer - shift1
+            layer_pred1 = current_layer + shift1
         else:
             layer_pred1 = int(layer_pred1)
 
         if layer_pred2 == "BL":
-            layer_pred2 = 0 if not current_layer else current_layer - shift2
+            layer_pred2 = 0 if not current_layer else current_layer + shift2
             # layer_pred2 = 0 if not current_layer else current_layer - 1
         else:
             layer_pred2 = int(layer_pred2)
