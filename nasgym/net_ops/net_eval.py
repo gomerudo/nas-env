@@ -471,11 +471,12 @@ number of replicas available."
                         # The optimizer via Gradient Descent (we can change it)
 
                         global_step = tf.train.get_global_step()
-                        learning_rate = tf.train.cosine_decay(
+                        learning_rate = tf.train.exponential_decay(
                             learning_rate=0.1,
                             global_step=global_step,
                             decay_steps=self.n_epochs,
-                            name="COS_DECAY"
+                            decay_rate=0.96,
+                            name="DECAY"
                         )
 
                         optimizer = tf.train.AdamOptimizer(
