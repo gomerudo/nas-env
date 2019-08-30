@@ -472,7 +472,7 @@ number of replicas available."
 
                         global_step = tf.train.get_global_step()
                         learning_rate = tf.train.exponential_decay(
-                            learning_rate=0.1,
+                            learning_rate=0.001,
                             global_step=global_step,
                             decay_steps=self.n_epochs,
                             decay_rate=0.96,
