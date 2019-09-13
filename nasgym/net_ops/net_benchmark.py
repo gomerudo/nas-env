@@ -2,282 +2,183 @@
 
 import math
 import tensorflow as tf
-from tensorflow.python.client import device_lib
 import nasgym.utl.configreader as cr
 from nasgym import nas_logger
 from nasgym import CONFIG_INI
-from nasgym.net_ops import LTYPE_ADD
-from nasgym.net_ops import LTYPE_AVGPOOLING
-from nasgym.net_ops import LTYPE_CONCAT
-from nasgym.net_ops import LTYPE_CONVULUTION
-from nasgym.net_ops import LTYPE_IDENTITY
-from nasgym.net_ops import LTYPE_MAXPOOLING
-from nasgym.net_ops import LTYPE_TERMINAL
 from nasgym.net_ops.net_trainer import NasEnvTrainerBase
 
 
-def sequence_to_net(sequence, input_tensor):
+def vgg_net_builder(input_tensor):
     """Build a network with TensorFlow, given a sequence of NSC."""
     # We use this list to store the built layers. Remember that each time we
     # iterate, we find the predecesor of the current layer, hence, the inputs
     # are never a problem. If for some reason the layer has no input, we should
     # throw an exception and ignore the layer
-    tf_layers = {
-        0: input_tensor
-    }
-    current_layer = None
-    
-    # We use this list to see if all layers were used to construct the graph
-    non_used_layers = list(set([layer[0] for layer in sequence]))
-    convolutions_count = 0
-    for layer_encoding in sequence:
-        layer_index = layer_encoding[0]
-        layer_type = layer_encoding[1]
-        layer_kernel_size = layer_encoding[2]
-        layer_pred1 = layer_encoding[3]  # Predecesor 1
-        layer_pred2 = layer_encoding[4]  # Predecesor 2
 
-        if not layer_index:
-            continue
+    current_layer = input_tensor
 
-        if layer_type == LTYPE_ADD:
-            # i.e. if no predecesors at all
-            if not layer_pred1 or not layer_pred2:
-                raise ValueError(
-                    "Invalid predecessors. Two predecessors are needed to \
-build this network."
-                )
-                # logging.warning("No predecessors for layer %d", layer_index)
+    with tf.name_scope("Block1"):
+        # Conv 1
+        current_layer = tf.keras.layers.Conv2D(
+            filters=64,
+            kernel_size=(3, 3),
+            padding="same",
+            name="Conv1"
+        )(current_layer)
 
-            with tf.name_scope("L{i}_ADD".format(i=layer_index)):
-                current_layer = safe_add(
-                    tensor_a=tf_layers[layer_pred1],
-                    tensor_b=tf_layers[layer_pred2],
-                    name="SafeAdd"
-                )
+        current_layer = tf.keras.layers.ReLU(
+            name="ReLU"
+        )(current_layer)
 
-        if layer_type == LTYPE_AVGPOOLING:
-            with tf.name_scope("L{i}_AVGPOOL".format(i=layer_index)):
-                current_layer = tf.keras.layers.AveragePooling2D(
-                    pool_size=(layer_kernel_size, layer_kernel_size),
-                    name="AvgPooling"
-                )(tf_layers[layer_pred1])
+        # Conv 2
+        current_layer = tf.keras.layers.Conv2D(
+            filters=64,
+            kernel_size=(3, 3),
+            padding="same",
+            name="Conv2"
+        )(current_layer)
 
-        if layer_type == LTYPE_CONCAT:
-            # i.e. if no predecesors at all
-            if not layer_pred1 or not layer_pred2:
-                # logging.warning("No predecessors for layer %d", layer_index)
-                raise ValueError(
-                    "Invalid predecessors. Two predecessors are needed to \
-build this network."
-                )
+        current_layer = tf.keras.layers.ReLU(
+            name="ReLU"
+        )(current_layer)
 
-            with tf.name_scope("L{i}_CONCAT".format(i=layer_index)):
-                current_layer = safe_concat(
-                    tensor_a=tf_layers[layer_pred1],
-                    tensor_b=tf_layers[layer_pred2],
-                    name="SafeConcat"
-                )
+        # Pooling
+        current_layer = tf.keras.layers.MaxPool2D(
+            pool_size=(2, 2),
+            strides=(2, 2),
+            name="MaxPooling",
+            # padding="same"
+        )(current_layer)
 
-        if layer_type == LTYPE_CONVULUTION:
-            with tf.name_scope("L{i}_PCC".format(i=layer_index)):
-                relu_layer = tf.keras.layers.ReLU(
-                    name="ReLU"
-                )(tf_layers[layer_pred1])
+    with tf.name_scope("Block2"):
+        # Conv 1
+        current_layer = tf.keras.layers.Conv2D(
+            filters=128,
+            kernel_size=(3, 3),
+            padding="same",
+            name="Conv1"
+        )(current_layer)
 
-                conv_layer = tf.keras.layers.Conv2D(
-                    filters=2**(convolutions_count + 4),
-                    kernel_size=(layer_kernel_size, layer_kernel_size),
-                    # padding="same",
-                    name="Conv"
-                )(relu_layer)
+        current_layer = tf.keras.layers.ReLU(
+            name="ReLU"
+        )(current_layer)
 
-                batch_norm = tf.keras.layers.BatchNormalization(
-                    name="BatchNorm"
-                )(conv_layer)
+        # Conv 2
+        current_layer = tf.keras.layers.Conv2D(
+            filters=128,
+            kernel_size=(3, 3),
+            padding="same",
+            name="Conv2"
+        )(current_layer)
 
-                current_layer = batch_norm
-                convolutions_count += 1
+        current_layer = tf.keras.layers.ReLU(
+            name="ReLU"
+        )(current_layer)
 
-        if layer_type == LTYPE_IDENTITY:
-            with tf.name_scope("L{i}_IDENTITY".format(i=layer_index)):
-                current_layer = tf.identity(
-                    input=tf_layers[layer_pred1],
-                    name="Identity"
-                )
+        # Pooling
+        current_layer = tf.keras.layers.MaxPool2D(
+            pool_size=(2, 2),
+            strides=(2, 2),
+            name="MaxPooling",
+            # padding="same"
+        )(current_layer)
 
-        if layer_type == LTYPE_MAXPOOLING:
-            with tf.name_scope("L{i}_MAXPOOL".format(i=layer_index)):
-                current_layer = tf.keras.layers.MaxPool2D(
-                    pool_size=(layer_kernel_size, layer_kernel_size),
-                    name="MaxPooling",
-                    # padding="same"
-                )(tf_layers[layer_pred1])
+    with tf.name_scope("Block3"):
+        # Conv 1
+        current_layer = tf.keras.layers.Conv2D(
+            filters=256,
+            kernel_size=(3, 3),
+            padding="same",
+            name="Conv1"
+        )(current_layer)
 
-        if layer_type == LTYPE_TERMINAL:
-            # We remove the terminal layer because we already visited it.
-            try:
-                non_used_layers.remove(layer_index)
-            except ValueError:
-                pass
+        current_layer = tf.keras.layers.ReLU(
+            name="ReLU"
+        )(current_layer)
 
-            # Force the end of the building process. We ignore any remaining
-            # portion of the sequence.
-            break
+        # Conv 2
+        current_layer = tf.keras.layers.Conv2D(
+            filters=256,
+            kernel_size=(3, 3),
+            padding="same",
+            name="Conv2"
+        )(current_layer)
 
-        # Add the current layer to the dictionary
-        tf_layers[layer_index] = current_layer
+        current_layer = tf.keras.layers.ReLU(
+            name="ReLU"
+        )(current_layer)
 
-        # Mark as used:
-        #   Two different try-except to always remove both of the predecesors
-        try:
-            non_used_layers.remove(layer_pred1)
-        except ValueError:
-            pass
+        # Pooling
+        current_layer = tf.keras.layers.MaxPool2D(
+            pool_size=(2, 2),
+            strides=(2, 2),
+            name="MaxPooling",
+            # padding="same"
+        )(current_layer)
 
-        try:
-            non_used_layers.remove(layer_pred2)
-        except ValueError:
-            pass
+    with tf.name_scope("Block4"):
+        # Conv 1
+        current_layer = tf.keras.layers.Conv2D(
+            filters=512,
+            kernel_size=(3, 3),
+            padding="same",
+            name="Conv1"
+        )(current_layer)
 
-    # Handle the non used layers: concatenate one by one.
-    #   The last layer before terminate is never used, but if there are two or
-    #   more, then we need to concatenate one by one.
-    if non_used_layers:
-        # print("Non used", non_used_layers)
-        pivot = tf_layers[non_used_layers[0]]
-        for idx in range(1, len(non_used_layers)):
-            with tf.name_scope("END_CONCAT{i}".format(i=idx)):
-                pivot = safe_concat(
-                    tensor_a=pivot,
-                    tensor_b=tf_layers[non_used_layers[idx]],
-                    name="SafeConcat"
-                )
-        current_layer = pivot
+        current_layer = tf.keras.layers.ReLU(
+            name="ReLU"
+        )(current_layer)
 
-    # current_layer is the last used layer
+        # Conv 2
+        current_layer = tf.keras.layers.Conv2D(
+            filters=512,
+            kernel_size=(3, 3),
+            padding="same",
+            name="Conv2"
+        )(current_layer)
+
+        current_layer = tf.keras.layers.ReLU(
+            name="ReLU"
+        )(current_layer)
+
+        # Pooling
+        current_layer = tf.keras.layers.MaxPool2D(
+            pool_size=(2, 2),
+            strides=(2, 2),
+            name="MaxPooling",
+            # padding="same"
+        )(current_layer)
+
+    with tf.name_scope("DenseBlock"):
+        current_layer = tf.layers.flatten(
+            inputs=current_layer,
+            name="Flatten"
+        )
+        current_layer = tf.layers.dense(
+            inputs=current_layer,
+            units=4096,
+            activation=tf.nn.relu,
+            name="Dense1"
+        )
+        current_layer = tf.layers.dense(
+            inputs=current_layer,
+            units=4096,
+            activation=tf.nn.relu,
+            name="Dense2"
+        )
     return current_layer
 
 
-def safe_concat(tensor_a, tensor_b, name):
-    """Concatenate two tensors even if they have different shapes.
+class NetBenchmarking(NasEnvTrainerBase):
 
-    The fix of the shapes is done with a zero-padding on both tensors.
-    """
-    fixed_b = fix_tensor_shape(
-        tensor_target=tensor_b,
-        tensor_reference=tensor_a,
-        free_axis=1
-    )
-    fixed_a = fix_tensor_shape(
-        tensor_target=tensor_a,
-        tensor_reference=tensor_b,
-        free_axis=1
-    )
-
-    concatenated = tf.keras.layers.concatenate(
-        inputs=[
-            fixed_a,
-            fixed_b,
-        ],
-        axis=3,
-        name=name
-    )
-
-    return concatenated
-
-
-def safe_add(tensor_a, tensor_b, name):
-    """Concatenate two tensors even if they have different shapes.
-
-    The fix of the shapes is done with a zero-padding on both tensors.
-    """
-    fixed_b = fix_tensor_shape(
-        tensor_target=tensor_b,
-        tensor_reference=tensor_a,
-        free_axis=1
-    )
-    fixed_a = fix_tensor_shape(
-        tensor_target=tensor_a,
-        tensor_reference=tensor_b,
-        free_axis=1
-    )
-
-    added = tf.keras.layers.add(
-        inputs=[
-            fixed_a,
-            fixed_b,
-        ],
-        name=name
-    )
-
-    return added
-
-
-def is_same_rank(tensor_a, tensor_b):
-    """Verify whether the rank of two tensors is the same."""
-    return tensor_a.get_shape().rank == tensor_b.get_shape().rank
-
-
-def fix_tensor_shape(tensor_target, tensor_reference, free_axis=1, name="pad"):
-    """Fix a tensor's shape with respect to a reference using padding."""
-    ref_shape = tensor_reference.get_shape().dims
-    target_shape = tensor_target.get_shape().dims
-    target_rank = len(target_shape)
-    ref_rank = len(ref_shape)
-
-    if ref_rank != target_rank:
-        raise ValueError("Tensors must have the same dimension.")
-
-    if free_axis < 0:
-        free_axis = ref_rank
-
-    free_axis -= 1  # Shift the axis to start with 0 for simplicity
-
-    paddings_arg = []
-    for it_axis in range(target_rank):
-        # If the current axis is the free axis then pad nothing, i.e. (rank, 0)
-        if it_axis == free_axis:
-            paddings_arg.append([0, 0])
-            continue
-
-        # Compute the difference of the axes to know how many pads are needed
-        if ref_shape[it_axis].value is None or \
-                target_shape[it_axis].value is None:
-            axes_diff = 0
-        else:
-            axes_diff = ref_shape[it_axis].value - target_shape[it_axis].value
-
-        # If target axis has a higher order than reference then do not pad.
-        if axes_diff < 0:
-            axes_diff = 0
-
-        # If everything is ok, we simply store the desired fix-value
-        paddings_arg.append([axes_diff//2, axes_diff - axes_diff//2])
-
-    # print("Padding with list", paddings_arg)
-
-    padded_tensor = tf.pad(
-        tensor=tensor_target,
-        paddings=tf.constant(paddings_arg),
-        mode="CONSTANT",
-        constant_values=0,
-        name=name + "padding"
-    )
-
-    return padded_tensor
-
-
-class NetEvaluation(NasEnvTrainerBase):
-
-    def __init__(self, encoded_network, input_shape, n_classes, batch_size=256,
+    def __init__(self, input_shape, n_classes, batch_size=256,
                  log_path="./trainer", variable_scope="evaluation",
                  n_epochs=12, op_beta1=0.9,
-                 op_beta2=0.999, op_epsilon=10e-08, fcl_units=1024,
+                 op_beta2=0.999, op_epsilon=10e-08,
                  dropout_rate=0.4, n_obs_train=None):
         """Specific constructor with option for FLOPS and Density."""
-        super(NetEvaluation, self).__init__(
-            encoded_network=encoded_network,
+        super(NetBenchmarking, self).__init__(
+            encoded_network=None,
             input_shape=input_shape,
             n_classes=n_classes,  # TODO: We don't use it.
             batch_size=batch_size,
@@ -288,7 +189,6 @@ class NetEvaluation(NasEnvTrainerBase):
         self.op_beta1 = op_beta1
         self.op_beta2 = op_beta2
         self.op_epsilon = op_epsilon
-        self.fcl_units = fcl_units
         self.dropout_rate = dropout_rate
         self.n_obs_train = n_obs_train
         # Total number of steps
@@ -400,37 +300,17 @@ number of replicas available."
                     net_input = features["x"]
 
                 # 2. Simply call the network
-                self.tf_partial_network = sequence_to_net(
-                    sequence=self.encoded_network,
+                self.tf_partial_network = vgg_net_builder(
                     input_tensor=net_input
                 )
 
-                # 3. Build the Fully-Connected layers after block.
-                with tf.name_scope("L_FC"):
-                    # Flatten and connect to the Dense Layer
-                    ll_flat = tf.layers.flatten(
-                        inputs=self.tf_partial_network,
-                        name="Flatten"
-                    )
-                    dense_layer = tf.layers.dense(
-                        inputs=ll_flat,
-                        units=self.fcl_units,
-                        activation=tf.nn.relu,
-                        name="DENSE"
-                    )
-                    dropout_layer = tf.layers.dropout(
-                        inputs=dense_layer,
-                        rate=self.dropout_rate,
-                        # pylint: disable=no-member
-                        training=mode == tf.estimator.ModeKeys.TRAIN,
-                        name="DROPOUT"
-                    )
+                # 3. Build the trainer
 
                 # 4. Build the Prediction Layer based on a Softmax
                 with tf.name_scope("L_PRED"):
                     # Logits layer
                     logits_layer = tf.layers.dense(
-                        inputs=dropout_layer,
+                        inputs=self.tf_partial_network,
                         units=self.n_clases,
                         name="PL_Logits"
                     )
