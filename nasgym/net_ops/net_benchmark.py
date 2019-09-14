@@ -83,38 +83,38 @@ def vgg_net_builder(input_tensor):
             # padding="same"
         )(current_layer)
 
-    with tf.name_scope("Block3"):
-        # Conv 1
-        current_layer = tf.keras.layers.Conv2D(
-            filters=256,
-            kernel_size=(3, 3),
-            padding="same",
-            name="Conv1"
-        )(current_layer)
+    # with tf.name_scope("Block3"):
+    #     # Conv 1
+    #     current_layer = tf.keras.layers.Conv2D(
+    #         filters=256,
+    #         kernel_size=(3, 3),
+    #         padding="same",
+    #         name="Conv1"
+    #     )(current_layer)
 
-        current_layer = tf.keras.layers.ReLU(
-            name="ReLU"
-        )(current_layer)
+    #     current_layer = tf.keras.layers.ReLU(
+    #         name="ReLU"
+    #     )(current_layer)
 
-        # Conv 2
-        current_layer = tf.keras.layers.Conv2D(
-            filters=256,
-            kernel_size=(3, 3),
-            padding="same",
-            name="Conv2"
-        )(current_layer)
+    #     # Conv 2
+    #     current_layer = tf.keras.layers.Conv2D(
+    #         filters=256,
+    #         kernel_size=(3, 3),
+    #         padding="same",
+    #         name="Conv2"
+    #     )(current_layer)
 
-        current_layer = tf.keras.layers.ReLU(
-            name="ReLU"
-        )(current_layer)
+    #     current_layer = tf.keras.layers.ReLU(
+    #         name="ReLU"
+    #     )(current_layer)
 
-        # Pooling
-        current_layer = tf.keras.layers.MaxPool2D(
-            pool_size=(2, 2),
-            strides=(2, 2),
-            name="MaxPooling",
-            # padding="same"
-        )(current_layer)
+    #     # Pooling
+    #     current_layer = tf.keras.layers.MaxPool2D(
+    #         pool_size=(2, 2),
+    #         strides=(2, 2),
+    #         name="MaxPooling",
+    #         # padding="same"
+    #     )(current_layer)
 
     # with tf.name_scope("Block4"):
     #     # Conv 1
