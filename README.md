@@ -10,7 +10,7 @@ This is a python package developed for the research project [Learning to reinfor
 
 The environment is fully compatible with the OpenAI baselines. It implements the RL steps for NAS, using the Neural Structure Code (NSC) of [BlockQNN: Efficient Block-wise Neural Network Architecture Generation](https://arxiv.org/abs/1808.05584) to encode the networks and make architectural changes. Under this setting, a Neural Network (i.e. the state for the reinforcement learning agent) is modeled as a list of NSCs, an action is the addition of a layer to the network, and the reward is the accuracy after the early-stop training. The datasets considered so far are the CIFAR-10 dataset (default) and the meta-dataset (it has to be downloaded as specified in [the original repository](https://github.com/gomerudo/meta-dataset)).
 
-## Highgligts
+## Highlights
 
 The code structure allows you to:
 
